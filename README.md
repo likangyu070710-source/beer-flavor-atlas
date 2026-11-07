@@ -3,6 +3,13 @@
 把数学建模论文《基于多输出偏最小二乘、共表达网络与风格条件生成模型的啤酒风味解析与调控》
 中的表格与结论，做成一个可交互的风味可视化站点。纯静态页面，无框架、无外部依赖、无网络请求。
 
+## 在线访问
+
+**<https://likangyu070710-source.github.io/beer-flavor-atlas/>**
+
+由 GitHub Pages 从 `main` 分支根目录直接发布，推送后约 1 分钟自动更新。手机、平板、电脑打开同一个链接即可，
+这也是转发给他人最省事的方式（不用发文件、不用装环境）。
+
 ## 运行
 
 直接双击 `index.html` 即可（数据以 `window.BEER_DATA` 形式随 `data/flavor-data.js` 加载，`file://` 下可用）。
@@ -29,16 +36,23 @@ python -m http.server 8000
 
 ```
 beer-flavor-atlas/
-├─ index.html                  页面骨架（5 个视图容器 + 侧栏 + 弹窗）
+├─ index.html                  页面骨架（侧栏 + 6 个视图容器 + 弹窗）
 ├─ assets/
 │  ├─ css/style.css            设计系统与响应式规则
 │  └─ js/
 │     ├─ charts.js             手写 SVG 图元：雷达、迷你条形谱、风格轴、堆叠条、环形
-│     └─ app.js                状态、路由、五个视图的渲染与交互、品鉴笔记生成器
+│     ├─ i18n.js               中英切换运行时（文本节点替换 + 空格修正）
+│     ├─ art.js                矢量啤酒插画（首页主视觉、卡片、图标）
+│     ├─ reactor.js            化合物交互页的入瓶动画与表情小人
+│     └─ app.js                状态、路由、各视图渲染与交互、品鉴笔记生成器
 ├─ data/
-│  └─ flavor-data.js           ★ 唯一的数据文件（window.BEER_DATA）
+│  ├─ flavor-data.js           ★ 唯一的数据文件（window.BEER_DATA）
+│  └─ i18n-en.js               英文映射表（由 tools/i18n_zh_en.tsv 生成）
+├─ dist/                       单文件版与打包产物
 └─ tools/
-   └─ build_data.py            数据构建脚本（可重跑，也可直接手改数据文件）
+   ├─ build_data.py            数据构建脚本（可重跑，也可直接手改数据文件）
+   ├─ build_i18n.py            TSV → data/i18n-en.js
+   └─ build_standalone.py      内联 CSS/JS/数据，输出 dist/啤酒风味图谱.html
 ```
 
 ## 数据文件结构
