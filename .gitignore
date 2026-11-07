@@ -1,0 +1,10 @@
+# 构建产物：单文件版由 tools/build_standalone.py 生成，压缩包不入库
+dist/*.zip
+
+# 系统与编辑器
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.log
