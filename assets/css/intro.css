@@ -1,0 +1,307 @@
+/* ============================================================
+   intro.css — 首页开屏
+   ------------------------------------------------------------
+   一句话说明：一杯酒从底部倒满字母，字被液体淹没，然后整层掀起。
+   只用 CSS 变量与 transform，不引入任何库，退出后 DOM 直接移除。
+   ============================================================ */
+
+/* 让渐变的分界线可以被动画驱动；不支持的浏览器保持奶油色文字，仍然可读 */
+@property --fill {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+.intro {
+  /* 兜底：万一脚本没执行（网络问题、报错），六秒后自动让开，
+     正常流程在 3.8 秒内就把这一层移除了，不会走到这里 */
+  animation: intro-failsafe 0.01s linear 6s forwards;
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #0a0806;
+  color: var(--ink, #f4ecdd);
+  cursor: pointer;
+  transform: translateY(0);
+  will-change: transform;
+}
+.intro.is-out {
+  transform: translateY(-100%);
+  transition: transform 0.92s cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* 开屏期间锁住页面滚动 */
+body.intro-lock {
+  overflow: hidden;
+}
+
+/* ---------------- 背景层 ---------------- */
+.intro-glow {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(560px 560px at var(--mx, 50%) var(--my, 62%), rgba(233, 169, 78, 0.20), transparent 68%),
+    radial-gradient(900px 620px at 50% 108%, rgba(233, 169, 78, 0.16), transparent 70%),
+    radial-gradient(700px 500px at 8% 4%, rgba(134, 171, 142, 0.07), transparent 66%);
+  transition: background 0.18s linear;
+}
+
+/* 极淡的横向刻度，给一点实验室图纸的感觉 */
+.intro-grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(rgba(236, 223, 203, 0.05) 1px, transparent 1px);
+  background-size: 100% 66px;
+  mask-image: radial-gradient(circle at 50% 60%, #000 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(circle at 50% 60%, #000 30%, transparent 78%);
+  opacity: 0;
+  animation: intro-fade 1.2s ease 0.1s forwards;
+}
+
+/* 顶部那根琥珀细线，先展开 */
+.intro-line {
+  position: absolute;
+  top: 46px;
+  left: 50%;
+  width: min(62vw, 780px);
+  height: 1px;
+  transform: translateX(-50%) scaleX(0);
+  transform-origin: 50% 50%;
+  background: linear-gradient(90deg, transparent, var(--amber, #e9a94e), transparent);
+  animation: intro-line 0.9s cubic-bezier(0.22, 0.8, 0.3, 1) 0.1s forwards;
+}
+
+/* ---------------- 主体 ---------------- */
+.intro-stage {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.intro-kicker {
+  margin: 0 0 26px;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.46em;
+  text-transform: uppercase;
+  color: rgba(233, 169, 78, 0.9);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: intro-rise 0.8s cubic-bezier(0.22, 0.8, 0.3, 1) 0.18s forwards;
+}
+
+/* 巨字：奶油色 → 被琥珀液体从下往上填满 */
+.intro-word {
+  position: relative;
+  margin: 0;
+  font-family: var(--font-ui, sans-serif);
+  font-size: clamp(104px, 25vw, 360px);
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  background-image: linear-gradient(
+    to top,
+    #b9762a 0%,
+    #e9a94e calc(var(--fill) - 6%),
+    #f6cd85 var(--fill),
+    #f4ecdd calc(var(--fill) + 1px),
+    #f4ecdd 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  transform: translateY(64px);
+  animation:
+    intro-word 1s cubic-bezier(0.22, 0.8, 0.3, 1) 0.22s forwards,
+    intro-fill 1.45s cubic-bezier(0.45, 0.02, 0.2, 1) 0.6s forwards;
+  will-change: transform, opacity, --fill;
+}
+
+/* 液面那道高光：随填充高度上移，再做轻微起伏 */
+.intro-surface {
+  position: absolute;
+  left: 50%;
+  bottom: var(--fill);
+  width: min(34vw, 320px);
+  height: 2px;
+  transform: translate(-50%, 1px);
+  border-radius: 2px;
+  background: linear-gradient(90deg, transparent, rgba(246, 205, 133, 0.95), transparent);
+  box-shadow: 0 0 30px 6px rgba(233, 169, 78, 0.5);
+  animation:
+    intro-surface 1.45s cubic-bezier(0.45, 0.02, 0.2, 1) 0.6s forwards,
+    intro-bob 2.6s ease-in-out 2.05s infinite;
+  pointer-events: none;
+}
+
+.intro-sub {
+  margin: 30px 0 0;
+  font-size: clamp(14px, 1.55vw, 17px);
+  letter-spacing: 0.4em;
+  text-indent: 0.4em;
+  color: rgba(244, 236, 221, 0.88);
+  opacity: 0;
+  transform: translateY(12px);
+  animation: intro-rise 0.9s cubic-bezier(0.22, 0.8, 0.3, 1) 0.98s forwards;
+}
+
+.intro-stats {
+  display: flex;
+  gap: clamp(22px, 5vw, 64px);
+  margin: clamp(26px, 4.4vh, 46px) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.intro-stats li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transform: translateY(14px);
+  animation: intro-rise 0.8s cubic-bezier(0.22, 0.8, 0.3, 1) forwards;
+}
+.intro-stats li:nth-child(1) { animation-delay: 1.16s; }
+.intro-stats li:nth-child(2) { animation-delay: 1.26s; }
+.intro-stats li:nth-child(3) { animation-delay: 1.36s; }
+
+.intro-stats b {
+  font-family: var(--font-num, Georgia, serif);
+  font-size: clamp(26px, 2.9vw, 40px);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--amber-2, #f6cd85);
+  font-variant-numeric: tabular-nums;
+}
+.intro-stats span {
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(162, 149, 127, 0.95);
+}
+
+/* ---------------- 底部进度与跳过 ---------------- */
+.intro-rail {
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  width: min(38vw, 320px);
+  height: 1px;
+  transform: translateX(-50%);
+  background: rgba(236, 223, 203, 0.14);
+  overflow: hidden;
+}
+.intro-rail span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  background: var(--amber, #e9a94e);
+  animation: intro-rail 2.45s linear 0.5s forwards;
+}
+
+.intro-skip {
+  position: absolute;
+  right: clamp(18px, 3vw, 44px);
+  bottom: 42px;
+  z-index: 3;
+  padding: 8px 14px;
+  font-family: var(--font-mono, monospace);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(244, 236, 221, 0.42);
+  border: 1px solid rgba(236, 223, 203, 0.14);
+  border-radius: 999px;
+  background: transparent;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.intro-skip:hover,
+.intro-skip:focus-visible {
+  color: var(--amber-2, #f6cd85);
+  border-color: rgba(233, 169, 78, 0.55);
+  background: rgba(233, 169, 78, 0.07);
+}
+
+/* 开屏被移除后，页面内容轻轻落位 */
+body.intro-armed .shell {
+  transform: scale(1.035);
+}
+/* 收场时页面由 JS 从下方顶入，CSS 只负责给一个终态，
+   避免和幕布的位移抢同一个属性 */
+body.intro-done .shell {
+  transform: none;
+}
+
+/* ---------------- 动画 ---------------- */
+@keyframes intro-failsafe {
+  to { opacity: 0; visibility: hidden; pointer-events: none; }
+}
+@keyframes intro-line {
+  to { transform: translateX(-50%) scaleX(1); }
+}
+@keyframes intro-fade {
+  to { opacity: 1; }
+}
+@keyframes intro-rise {
+  to { opacity: 1; transform: none; }
+}
+@keyframes intro-word {
+  to { opacity: 1; transform: none; }
+}
+@keyframes intro-fill {
+  to { --fill: 100%; }
+}
+@keyframes intro-surface {
+  from { bottom: 0%; }
+  to { bottom: 100%; }
+}
+@keyframes intro-bob {
+  0%, 100% { transform: translate(-50%, 1px); }
+  50% { transform: translate(-50%, -3px); }
+}
+@keyframes intro-rail {
+  to { transform: scaleX(1); }
+}
+
+/* ---------------- 窄屏 ---------------- */
+@media (max-width: 640px) {
+  .intro-word { font-size: clamp(84px, 27vw, 160px); }
+  .intro-kicker { letter-spacing: 0.3em; font-size: 9.5px; margin-bottom: 20px; }
+  .intro-sub { letter-spacing: 0.24em; text-indent: 0.24em; margin-top: 20px; }
+  .intro-stats { gap: 26px; }
+  .intro-rail { bottom: 44px; width: 56vw; }
+  .intro-skip { bottom: 34px; right: 16px; }
+  .intro-line { top: 34px; width: 72vw; }
+  .intro-grid { background-size: 100% 52px; }
+}
+
+/* ---------------- 减少动态 ---------------- */
+@media (prefers-reduced-motion: reduce) {
+  .intro-line,
+  .intro-grid,
+  .intro-kicker,
+  .intro-word,
+  .intro-sub,
+  .intro-stats li,
+  .intro-rail span {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .intro-word { --fill: 100%; }
+  .intro-surface { animation: none; bottom: 100%; }
+  .intro.is-out { transition-duration: 0.01s; }
+}

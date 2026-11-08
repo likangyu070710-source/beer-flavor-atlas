@@ -21,7 +21,7 @@ with sync_playwright() as p:
     page.on("pageerror", lambda e: errors.append(("pageerror", str(e))))
 
     for f, key in PAGES:
-        page.goto(f"{BASE}/{f}", wait_until="networkidle")
+        page.goto(f"{BASE}/{f}?intro=0", wait_until="networkidle")
         h1 = page.locator("h1").first
         visible = h1.is_visible() if h1.count() else False
         txt = h1.inner_text().strip()[:26] if h1.count() else "—"
@@ -34,13 +34,13 @@ with sync_playwright() as p:
               f"overflow={overflow} hrefs={hrefs}")
 
     # 点击导航：从首页进化合物页
-    page.goto(f"{BASE}/index.html", wait_until="networkidle")
+    page.goto(f"{BASE}/index.html?intro=0", wait_until="networkidle")
     page.click('.nav-item[href="lab.html"]')
     page.wait_for_load_state("networkidle")
     print("\n导航跳转 ->", page.url.split("/")[-1], "| h1:", page.locator("h1").first.inner_text().strip()[:20])
 
     # 键盘：第一下 Tab 应落在 skip link
-    page.goto(f"{BASE}/index.html", wait_until="networkidle")
+    page.goto(f"{BASE}/index.html?intro=0", wait_until="networkidle")
     page.keyboard.press("Tab")
     focused = page.evaluate("document.activeElement.className + '|' + document.activeElement.textContent.trim()")
     print("首个 Tab 焦点 ->", focused)
@@ -48,7 +48,7 @@ with sync_playwright() as p:
     # 手机视口
     m = browser.new_page(viewport={"width": 390, "height": 844})
     for f, _ in PAGES:
-        m.goto(f"{BASE}/{f}", wait_until="networkidle")
+        m.goto(f"{BASE}/{f}?intro=0", wait_until="networkidle")
         ov = m.evaluate("document.documentElement.scrollWidth - window.innerWidth")
         print(f"390px {f:<15} overflow={ov}")
 

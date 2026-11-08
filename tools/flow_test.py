@@ -51,7 +51,7 @@ with sync_playwright() as p:
     page.screenshot(path="shots/detail.png", full_page=False)
     shots.append("detail")
 
-    page.goto(f"{BASE}/index.html", wait_until="networkidle")
+    page.goto(f"{BASE}/index.html?intro=0", wait_until="networkidle")
     page.wait_for_timeout(700)
     page.screenshot(path="shots/home.png", full_page=False)
     shots.append("home")
