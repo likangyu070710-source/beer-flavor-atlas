@@ -12,9 +12,11 @@
   const FAM = Object.fromEntries(D.families.map((f) => [f.id, f]));
   const GRP = Object.fromEntries(D.groups.map((g) => [g.id, g]));
   const C = window.Charts;
+  const PG = window.AtlasPages;
+  const PAGE = (document.body && document.body.dataset.page) || "home";
 
   const state = {
-    view: "home",
+    view: PAGE,
     styleId: "tripel",
     detail: false,
     group: "all",
@@ -347,7 +349,7 @@
     el.innerHTML =
       '<button class="line-btn" data-back style="margin-bottom:18px">← 返回风格列表</button>' +
       '<div class="d-hero"><div class="d-title"><div class="eyebrow">风格档案 · ' + s.en + "</div>" +
-      "<h2>" + s.cn + "<em>" + s.en + "</em></h2>" +
+      "<h1>" + s.cn + "<em>" + s.en + "</em></h1>" +
       '<p class="d-desc">' + s.desc + "</p>" +
       '<div class="d-meta"><span class="tag tag-amber">' + GRP[s.group].cn + "</span>" +
       '<span class="tag">' + (s.n ? s.n + " 个样本" : "样本 n≥3") + "</span>" +
@@ -457,7 +459,7 @@
     el.innerHTML =
       '<div class="view-head"><div class="eyebrow">02 / 化合物交互 · Compound lab</div>' +
       "<h1>把配方拆成化合物<em>Build a profile</em></h1>" +
-      '<p class="lede">左栏是论文涉及的 55 个风味化合物。点击加入或移除，右侧会实时给出<b>每种化合物的感官属性</b>，' +
+      '<p class="lede">目录里是论文涉及的 55 个风味化合物。点击加入或移除，旁边的面板会实时给出<b>每种化合物的感官属性</b>，' +
       "以及它相对所选风格的<b>影响强度与方向</b>——偏高意味着这一版比典型风格更浓，偏低则相反。</p></div>" +
       '<div class="toolbar"><div class="sel-field" style="max-width:280px;flex:1 1 240px"><label>风格语境</label>' +
       '<select id="labStyle">' + options + "</select></div>" +
@@ -512,7 +514,7 @@
       '<span class="panel-note">目标风格：' + s.cn + "</span></div>" +
       (sel.length
         ? '<div class="sel-strip">' + pills + "</div>"
-        : '<p class="empty-hint">还没有化合物。可以从左栏逐个加入，或点上方「载入该风格的特征组合」。</p>') +
+        : '<p class="empty-hint">还没有化合物。可以从目录逐个加入，或点「载入该风格的特征组合」。</p>') +
       '<div class="two-col" style="margin-top:16px;grid-template-columns:minmax(0,1fr) 300px;align-items:center">' +
       '<div><div class="match-box"><div class="match-num">' + (sel.length ? Math.round(match) : "—") + '<small>%</small></div>' +
       '<div class="match-txt">与本风格画像的贴合度<br><span style="color:var(--muted-2)">按 12 个感官轴的均方误差换算</span></div></div>' +
@@ -636,6 +638,7 @@
       };
     }
     renderLab();
+    persist();
   }
 
   /* ================= 口味生成 ================= */
@@ -1199,9 +1202,21 @@
     $("#crumbStyle").textContent = window.ATLAS_LANG === "en" ? s.en : s.cn + " " + s.en;
   }
 
+  /* 跨页记忆：只存「用户选了什么」，不存渲染结果 */
+  function persist() {
+    if (!PG || !PG.isMultiPage) return;
+    PG.write({ styleId: state.styleId, sel: state.sel, from: state.from, to: state.to, tab: state.tab });
+  }
+
+  /* 地址栏跟随状态，刷新和分享都能回到同一处 */
+  function syncUrl(view, params) {
+    if (!PG || !history.replaceState) return;
+    history.replaceState(null, "", PG.url(view, params));
+  }
+
   function render() {
-    $$(".view").forEach((v) => v.classList.toggle("is-on", v.dataset.view === state.view));
-    $$(".nav-item").forEach((n) => n.classList.toggle("is-on", n.dataset.view === state.view));
+    const el = $(".view");
+    if (el) el.classList.add("is-on");
     if (state.view === "home") renderHome();
     if (state.view === "style") renderStyle();
     if (state.view === "lab") renderLab();
@@ -1216,17 +1231,21 @@
     if (window.AtlasI18n) window.AtlasI18n.apply(document.body);
   });
 
-  function go(view) {
-    state.view = view;
-    if (view !== "style") state.detail = false;
-    location.hash = view;
-    render();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  /* 多页之间用真实地址跳转，浏览器前进/后退、新标签打开都正常工作 */
+  function go(view, params) {
+    if (!PG) return;
+    if (view === state.view) {
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    persist();
+    location.href = PG.url(view, params);
   }
 
   document.addEventListener("click", (e) => {
-    const nav = e.target.closest(".nav-item");
-    if (nav) { e.preventDefault(); go(nav.dataset.view); return; }
+    /* 导航是真实链接，交给浏览器处理；这里只兜底同页锚点 */
+    if (e.target.closest(".nav-item")) return;
 
     if (state.view === "home") {
       const jump = e.target.closest("[data-go]");
@@ -1237,7 +1256,7 @@
         state.detail = true;
         state.sel = SM[state.styleId].key.slice(0, 6);
         syncCrumb();
-        go("style");
+        go("style", { style: state.styleId });
         return;
       }
     }
@@ -1249,7 +1268,10 @@
       if (card) {
         state.styleId = card.dataset.style; state.detail = true;
         state.sel = SM[state.styleId].key.slice(0, 6);
-        syncCrumb(); renderStyle(); window.scrollTo({ top: 0, behavior: "smooth" }); return;
+        syncCrumb(); renderStyle();
+        persist();
+        syncUrl("style", { style: state.styleId });
+        window.scrollTo({ top: 0, behavior: "smooth" }); return;
       }
     }
 
@@ -1257,37 +1279,65 @@
     if (e.target.closest("[data-close-scale]")) { closeScale(); return; }
 
     const back = e.target.closest("[data-back]");
-    if (back) { state.detail = false; renderStyle(); return; }
+    if (back) {
+      state.detail = false;
+      renderStyle();
+      syncUrl("style");
+      return;
+    }
 
     const labBtn = e.target.closest("[data-lab]");
-    if (labBtn) { state.sel = SM[state.styleId].key.slice(0, 8); go("lab"); return; }
+    if (labBtn) { state.sel = SM[state.styleId].key.slice(0, 8); persist(); go("lab"); return; }
 
     const migBtn = e.target.closest("[data-migrate]");
-    if (migBtn) { state.to = state.styleId; state.from = state.styleId === "pils" ? "tripel" : "pils"; state.tab = "list"; go("transfer"); return; }
+    if (migBtn) {
+      state.to = state.styleId;
+      state.from = state.styleId === "pils" ? "tripel" : "pils";
+      state.tab = "list";
+      go("transfer", { from: state.from, to: state.to });
+      return;
+    }
 
     if (e.target.closest("[data-reseed]")) { state.seed++; renderNote(); return; }
     if (e.target.closest("[data-copy]")) { copyNote(); return; }
-    if (e.target.closest("[data-swap]")) { const t = state.from; state.from = state.to; state.to = t; renderTransfer(); return; }
+    if (e.target.closest("[data-swap]")) {
+      const t = state.from; state.from = state.to; state.to = t;
+      renderTransfer();
+      persist();
+      syncUrl("transfer", { from: state.from, to: state.to, tab: state.tab });
+      return;
+    }
 
     const tab = e.target.closest("[data-tab]");
-    if (tab) { state.tab = tab.dataset.tab; renderTransfer(); return; }
+    if (tab) {
+      state.tab = tab.dataset.tab;
+      renderTransfer();
+      persist();
+      syncUrl("transfer", { from: state.from, to: state.to, tab: state.tab });
+      return;
+    }
 
-    if (e.target.closest("[data-clear]")) { state.sel = []; renderLab(); return; }
-    if (e.target.closest("[data-preset]")) { state.sel = SM[state.styleId].key.slice(0, 8); renderLab(); return; }
+    if (e.target.closest("[data-clear]")) { state.sel = []; renderLab(); persist(); return; }
+    if (e.target.closest("[data-preset]")) { state.sel = SM[state.styleId].key.slice(0, 8); renderLab(); persist(); return; }
   });
 
   document.addEventListener("change", (e) => {
-    if (e.target.id === "fromSel") { state.from = e.target.value; renderTransfer(); }
-    if (e.target.id === "toSel") { state.to = e.target.value; renderTransfer(); }
-  });
-
-  window.addEventListener("hashchange", () => {
-    const v = (location.hash || "").replace("#", "").split("/")[0];
-    if (v && v !== state.view && ["home", "style", "lab", "note", "origin", "transfer"].indexOf(v) >= 0) {
-      state.view = v;
-      render();
+    if (e.target.id === "fromSel") {
+      state.from = e.target.value;
+      renderTransfer();
+      persist();
+      syncUrl("transfer", { from: state.from, to: state.to, tab: state.tab });
+    }
+    if (e.target.id === "toSel") {
+      state.to = e.target.value;
+      renderTransfer();
+      persist();
+      syncUrl("transfer", { from: state.from, to: state.to, tab: state.tab });
     }
   });
+
+  /* 关掉标签页前再存一次，覆盖键盘操作等没走 click 的路径 */
+  window.addEventListener("pagehide", persist);
 
   // 化合物目录与选择（lab 视图内）
   document.addEventListener("click", (e) => {
@@ -1389,18 +1439,43 @@
   }
 
   /* ---------------- 启动 ---------------- */
+  /* 每页只渲染自己那一个视图；状态从地址参数与会话记忆里恢复，
+     所以从风格库跳到化合物页，选中的风格和化合物不会丢。 */
   function boot() {
-    const h = (location.hash || "#home").replace("#", "").split("/");
-    state.view = ["home", "style", "lab", "note", "origin", "transfer"].indexOf(h[0]) >= 0 ? h[0] : "home";
-    if (h[1] && SM[h[1]]) { state.styleId = h[1]; state.detail = true; }
-    state.sel = SM[state.styleId].key.slice(0, 6);
+    const saved = PG && PG.isMultiPage ? PG.read() : {};
+    const q = new URLSearchParams(location.search);
+
+    if (saved.styleId && SM[saved.styleId]) state.styleId = saved.styleId;
+    if (SM[q.get("style")]) { state.styleId = q.get("style"); state.detail = true; }
+    if (SM[q.get("from")]) state.from = q.get("from");
+    if (SM[q.get("to")]) state.to = q.get("to");
+    if (q.get("tab")) state.tab = q.get("tab");
+
+    const selRaw = q.get("sel");
+    if (selRaw) {
+      state.sel = selRaw.split(",").filter((id) => CM[id]);
+    } else if (saved.sel && saved.sel.length) {
+      state.sel = saved.sel.filter((id) => CM[id]);
+    }
+    if (!state.sel.length) {
+      state.sel = SM[state.styleId].key.slice(0, state.view === "lab" ? 8 : 6);
+    }
+
     syncCrumb();
     render();
+    persist();
+
+    /* 窄屏导航是横向滚动的，把当前页滚进视野，避免用户以为只有两个入口 */
+    const cur = $('.nav-item[aria-current="page"]');
+    if (cur && cur.scrollIntoView) {
+      cur.scrollIntoView({ block: "nearest", inline: "center" });
+    }
 
     $("#btnReset").addEventListener("click", () => {
       state.sel = SM[state.styleId].key.slice(0, 6);
       state.seed = 0;
       render();
+      persist();
     });
   }
 

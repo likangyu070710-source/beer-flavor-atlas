@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>化合物交互 · 啤酒风味图谱</title>
+<meta name="description" content="55 种风味化合物自由增删，实时给出组合的感官轮廓、与目标风格的贴合度，以及每种化合物的影响方向与强度。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23140f0a'/%3E%3Cg transform='translate(20 20) scale(1.264) translate(-20 -21.12)'%3E%3Cpath d='M12.4 13.8h15.2l-1.5 17.9a3.6 3.6 0 0 1-3.6 3.3h-5a3.6 3.6 0 0 1-3.6-3.3L12.4 13.8Z' fill='%23e9a94e'/%3E%3Ccircle cx='15.4' cy='12.7' r='3.6' fill='%23f7e8cc'/%3E%3Ccircle cx='20' cy='11.4' r='4.2' fill='%23f7e8cc'/%3E%3Ccircle cx='24.6' cy='12.7' r='3.6' fill='%23f7e8cc'/%3E%3Crect x='12.3' y='13.1' width='15.4' height='3.4' rx='1.7' fill='%23f7e8cc'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body data-page="lab" data-title-zh="化合物交互 · 啤酒风味图谱" data-title-en="Compound lab · Beer Flavor Atlas">
+<a class="skip-link" href="#main">跳到主内容</a>
+
+<div class="shell">
+  <aside class="rail" aria-label="站点导航">
+    <a class="brand" href="index.html" aria-label="返回首页">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 40 40" fill="none" aria-hidden="true" focusable="false">
+          <g transform="translate(20 20) scale(1.18) translate(-20 -21.12)">
+            <path d="M12.4 13.8h15.2l-1.5 17.9a3.6 3.6 0 0 1-3.6 3.3h-5a3.6 3.6 0 0 1-3.6-3.3L12.4 13.8Z" fill="currentColor"/>
+            <circle cx="15.4" cy="12.7" r="3.6" fill="#f7e8cc"/>
+            <circle cx="20" cy="11.4" r="4.2" fill="#f7e8cc"/>
+            <circle cx="24.6" cy="12.7" r="3.6" fill="#f7e8cc"/>
+            <rect x="12.3" y="13.1" width="15.4" height="3.4" rx="1.7" fill="#f7e8cc"/>
+          </g>
+        </svg>
+      </span>
+      <span class="brand-txt">
+        <strong>啤酒风味图谱</strong>
+        <em>Beer Flavor Atlas</em>
+      </span>
+    </a>
+
+    <nav class="nav" id="nav" aria-label="主导航">
+      <a class="nav-item" href="index.html" data-view="home">
+        <span class="nav-no">00</span>
+        <span class="nav-lab"><b>首页</b><i>Home</i></span>
+      </a>
+      <a class="nav-item" href="styles.html" data-view="style">
+        <span class="nav-no">01</span>
+        <span class="nav-lab"><b>风格查询</b><i>Style library</i></span>
+      </a>
+      <a class="nav-item is-on" href="lab.html" data-view="lab" aria-current="page">
+        <span class="nav-no">02</span>
+        <span class="nav-lab"><b>化合物交互</b><i>Compound lab</i></span>
+      </a>
+      <a class="nav-item" href="note.html" data-view="note">
+        <span class="nav-no">03</span>
+        <span class="nav-lab"><b>口味生成</b><i>Tasting note</i></span>
+      </a>
+      <a class="nav-item" href="origin.html" data-view="origin">
+        <span class="nav-no">04</span>
+        <span class="nav-lab"><b>风格溯源</b><i>Origin · Tripel</i></span>
+      </a>
+      <a class="nav-item" href="transfer.html" data-view="transfer">
+        <span class="nav-no">05</span>
+        <span class="nav-lab"><b>风格迁移</b><i>Style transfer</i></span>
+      </a>
+    </nav>
+
+    <div class="rail-foot">
+      <div class="rail-stat">
+        <span><b>250</b>款啤酒</span>
+        <span><b>226</b>项指标</span>
+        <span><b>22</b>种风格</span>
+      </div>
+      <p>数据源自数学建模论文《基于多输出偏最小二乘、共表达网络与风格条件生成模型的啤酒风味解析与调控》</p>
+      <button class="link-btn" type="button" data-open-scale>数据口径与出处 →</button>
+    </div>
+  </aside>
+
+  <main class="main" id="main" tabindex="-1">
+    <header class="topbar">
+      <div class="crumb" id="crumb">
+        <span class="crumb-k">当前风格</span>
+        <span class="crumb-v" id="crumbStyle">三料 Tripel</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="lang-switch no-i18n" id="langSwitch" role="group" aria-label="语言 / Language">
+          <button type="button" data-lang="zh" class="is-on" aria-pressed="true">中</button>
+          <button type="button" data-lang="en" aria-pressed="false">EN</button>
+        </div>
+        <button class="ghost-btn" type="button" data-open-scale>数据口径</button>
+        <button class="ghost-btn" type="button" id="btnReset">重置选择</button>
+      </div>
+    </header>
+
+    <section class="view is-on" id="view-lab" data-view="lab"></section>
+
+    <footer class="site-foot">
+      <p>内容依据论文表格整理；含量区间按分位得分口径推算，不是实测数据库。</p>
+      <p class="site-foot-links">
+        <a href="index.html">首页</a>
+        <span aria-hidden="true">·</span>
+        <a href="styles.html">风格库</a>
+        <span aria-hidden="true">·</span>
+        <a href="https://github.com/likangyu070710-source/beer-flavor-atlas" rel="noopener">GitHub 仓库</a>
+      </p>
+    </footer>
+  </main>
+</div>
+
+<div class="modal" id="scaleModal" aria-hidden="true">
+  <div class="modal-veil" data-close-scale></div>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="scaleTitle">
+    <button class="modal-x" type="button" data-close-scale aria-label="关闭">×</button>
+    <div id="scaleBody"></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+
+<script src="data/flavor-data.js"></script>
+<script src="data/i18n-en.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/i18n.js"></script>
+<script src="assets/js/art.js"></script>
+<script src="assets/js/reactor.js"></script>
+<script src="assets/js/pages.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
