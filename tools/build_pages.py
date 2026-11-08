@@ -122,7 +122,19 @@ TEMPLATE = """<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>@@TITLE@@</title>
 <meta name="description" content="@@DESC@@">
-<link rel="icon" href="@@FAVICON@@">
+<link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="images/favicon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="images/apple-touch-icon.png">
+<meta name="theme-color" content="#140f0a">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="啤酒风味图谱">
+<meta property="og:title" content="@@TITLE@@">
+<meta property="og:description" content="@@DESC@@">
+<meta property="og:image" content="https://likangyu070710-source.github.io/beer-flavor-atlas/images/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://likangyu070710-source.github.io/beer-flavor-atlas/@@FILE@@">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body data-page="@@KEY@@" data-title-zh="@@TITLE@@" data-title-en="@@TITLE_EN@@">
@@ -216,6 +228,7 @@ def main():
             .replace("@@TITLE@@", html.escape(p["title"], quote=True))
             .replace("@@DESC@@", html.escape(p["desc"], quote=True))
             .replace("@@KEY@@", p["key"])
+            .replace("@@FILE@@", p["file"])
             .replace("@@FAVICON@@", FAVICON)
             .replace("@@BRAND_ICON@@", BRAND_ICON)
             .replace("@@NAV@@", nav_items(p["key"]))
