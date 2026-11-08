@@ -189,7 +189,7 @@
       '<section class="hm-hero">' +
       '<div class="hm-hero-body">' +
       '<div class="eyebrow">00 / 首页 · Home</div>' +
-      "<h1>一杯啤酒里有 226 个可测的风味分子</h1>" +
+      "<h1>一杯啤酒里有 226\u00A0个可测的风味分子</h1>" +
       '<p class="lede">从 250 款商业啤酒的化学谱与 50 维感官评分出发，把风格拆成能读、能调、能迁移的化合物组合。</p>' +
       '<div class="hm-cta">' +
       '<button class="solid-btn" data-go="style">进入风格库</button>' +
@@ -247,7 +247,7 @@
           return "<span><i></i>" + c.cn + "</span>";
         }).join("");
         return (
-          '<article class="s-card" data-style="' + s.id + '">' +
+          '<article class="s-card" data-style="' + s.id + '" role="button" tabindex="0">' +
           '<div class="s-top"><div><div class="s-name">' + s.cn + '</div><div class="s-en">' + s.en + "</div></div>" +
           '<span class="s-fam">' + GRP[s.group].cn + "</span></div>" +
           '<div class="s-body"><div class="s-radar">' + C.miniBars(vals, 62, 34) + "</div>" +
@@ -1410,6 +1410,13 @@
   }
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") closeScale();
+    /* 风格卡是 article，补上键盘激活，否则只能用鼠标点 */
+    if (e.key === "Enter" || e.key === " ") {
+      const card = e.target.closest && e.target.closest(".s-card[data-style]");
+      if (!card) return;
+      e.preventDefault();
+      card.click();
+    }
   });
 
   /* ---------------- tooltip ---------------- */

@@ -9,12 +9,14 @@
   --panel: #191613;
   --panel-2: #1f1b17;
   --panel-3: #251f1a;
-  --line: rgba(236, 223, 203, 0.10);
-  --line-2: rgba(236, 223, 203, 0.18);
+  --line: rgba(236, 223, 203, 0.13);
+  --line-2: rgba(236, 223, 203, 0.22);
+  --line-strong: rgba(236, 223, 203, 0.3);
+  --line-control: rgba(236, 223, 203, 0.42);
   --ink: #f4ecdd;
   --ink-2: #d9cdb9;
   --muted: #a2957f;
-  --muted-2: #7d7365;
+  --muted-2: #8f8577;
   --amber: #e9a94e;
   --amber-2: #f6cd85;
   --amber-dim: rgba(233, 169, 78, 0.14);
@@ -27,8 +29,16 @@
   --green: #6f9d7c;
 
   --r-s: 8px;
-  --r-m: 14px;
+  --r-m: 12px;
   --r-l: 20px;
+
+  /* 动效只留三档：微反馈 / 悬停 / 进场 */
+  --ease: cubic-bezier(0.22, 0.8, 0.3, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --dur-1: 0.13s;
+  --dur-2: 0.22s;
+  --dur-3: 0.4s;
+
   --font-ui: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei",
     system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-num: "Iowan Old Style", "Palatino Linotype", "Georgia", "Times New Roman", serif;
@@ -209,16 +219,7 @@ svg { display: block; }
   vertical-align: 2px;
 }
 .topbar-actions { display: flex; gap: 8px; }
-.ghost-btn {
-  padding: 5px 12px;
-  border: 1px solid var(--line-2);
-  border-radius: 100px;
-  font-size: 11.5px;
-  color: var(--muted);
-  letter-spacing: 0.03em;
-  transition: all 0.18s ease;
-}
-.ghost-btn:hover { color: var(--ink); border-color: rgba(233, 169, 78, 0.45); background: rgba(233, 169, 78, 0.07); }
+/* .ghost-btn 的尺寸与状态统一在下方的按钮基类里 */
 
 .view { display: none; animation: rise 0.42s cubic-bezier(0.22, 0.8, 0.3, 1) both; }
 .view.is-on { display: block; }
@@ -252,6 +253,8 @@ h1 {
   line-height: 1.24;
   font-weight: 600;
   letter-spacing: 0.01em;
+  /* 两行时让断行更均衡，避免「226 / 个」这种拆法；不支持的浏览器忽略 */
+  text-wrap: balance;
 }
 h1 em {
   font-family: var(--font-num);
@@ -265,9 +268,10 @@ h1 em {
 .lede {
   margin: 0;
   max-width: 720px;
-  font-size: 13.5px;
-  line-height: 1.85;
+  font-size: 14.5px;
+  line-height: 1.78;
   color: var(--muted);
+  text-wrap: pretty;
 }
 .lede b { color: var(--ink-2); font-weight: 500; }
 
@@ -276,9 +280,9 @@ h1 em {
   align-items: baseline;
   gap: 10px;
   margin: 0 0 14px;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
 }
 .h2 small {
   font-family: var(--font-mono);
@@ -290,10 +294,10 @@ h1 em {
 }
 .h3 {
   margin: 0 0 10px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--ink-2);
+  letter-spacing: 0.04em;
+  color: var(--ink);
 }
 
 .panel {
@@ -311,7 +315,7 @@ h1 em {
   margin-bottom: 14px;
 }
 .panel-head .h2 { margin: 0; }
-.panel-note { font-size: 11px; color: var(--muted-2); }
+.panel-note { font-size: 11px; color: var(--muted); }
 
 /* ---------------- 工具栏 / 搜索 ---------------- */
 .toolbar {
@@ -330,16 +334,23 @@ h1 em {
   width: 100%;
   padding: 9px 14px 9px 34px;
   background: rgba(236, 223, 203, 0.04);
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line-control);
   border-radius: 100px;
   color: var(--ink);
   font-size: 12.5px;
   letter-spacing: 0.02em;
   outline: none;
-  transition: border 0.18s ease, background 0.18s ease;
+  transition: border-color var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease);
 }
 .search input::placeholder { color: var(--muted-2); }
 .search input:focus { border-color: rgba(233, 169, 78, 0.55); background: rgba(233, 169, 78, 0.06); }
+/* 输入框自己声明了 outline:none，特异性压过全局 :focus-visible，
+   这里补回来，键盘用户才有描边 */
+.search input:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
 .search svg {
   position: absolute;
   left: 12px; top: 50%;
@@ -355,10 +366,11 @@ h1 em {
   font-size: 11.5px;
   color: var(--muted);
   letter-spacing: 0.03em;
-  transition: all 0.16s ease;
+  transition: color var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease), transform var(--dur-1) var(--ease);
   white-space: nowrap;
 }
-.chip:hover { color: var(--ink-2); border-color: var(--line-2); background: rgba(236, 223, 203, 0.05); }
+.chip:hover { color: var(--ink); border-color: rgba(233, 169, 78, 0.38); background: rgba(236, 223, 203, 0.06); }
 .chip.is-on {
   color: #1a1409;
   background: var(--amber);
@@ -384,7 +396,8 @@ h1 em {
   background: linear-gradient(165deg, rgba(33, 28, 23, 0.86), rgba(21, 18, 15, 0.66));
   cursor: pointer;
   overflow: hidden;
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: transform var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease);
 }
 .s-card::after {
   content: "";
@@ -392,7 +405,7 @@ h1 em {
   inset: 0;
   background: radial-gradient(220px 120px at 85% 0%, rgba(233, 169, 78, 0.13), transparent 70%);
   opacity: 0;
-  transition: opacity 0.24s ease;
+  transition: opacity var(--dur-2) var(--ease);
   pointer-events: none;
 }
 .s-card:hover { transform: translateY(-2px); border-color: rgba(233, 169, 78, 0.38); box-shadow: 0 14px 32px -22px rgba(0, 0, 0, 0.9); }
@@ -470,7 +483,7 @@ h1 em {
   font-size: 0.72em;
   padding-left: 8px;
 }
-.d-desc { margin: 0; font-size: 13px; line-height: 1.9; color: var(--muted); max-width: 560px; }
+.d-desc { margin: 0; font-size: 14px; line-height: 1.9; color: var(--muted); max-width: 560px; }
 .d-meta { display: flex; flex-wrap: wrap; gap: 7px; }
 .tag {
   font-size: 10.5px;
@@ -481,7 +494,7 @@ h1 em {
   color: var(--muted);
 }
 .tag-amber { color: var(--amber-2); border-color: rgba(233, 169, 78, 0.34); background: rgba(233, 169, 78, 0.08); }
-.tag-src { font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.06em; }
+.tag-src { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; }
 
 .radar-box {
   border: 1px solid var(--line);
@@ -502,7 +515,7 @@ h1 em {
 .metric-k { font-size: 10px; letter-spacing: 0.1em; color: var(--muted-2); text-transform: uppercase; }
 .metric-v {
   font-family: var(--font-num);
-  font-size: 21px;
+  font-size: 23px;
   line-height: 1.25;
   color: var(--ink);
   margin-top: 3px;
@@ -516,9 +529,10 @@ h1 em {
   grid-template-columns: minmax(140px, 1.2fr) 86px 210px 74px minmax(118px, 1fr);
   gap: 14px;
   align-items: center;
-  padding: 12px 8px;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
   font-size: 12px;
+  transition: background-color var(--dur-1) var(--ease);
 }
 .t-row:last-child { border-bottom: 0; }
 .t-head {
@@ -777,26 +791,62 @@ h1 em {
   color: var(--muted-2);
 }
 .note-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.solid-btn {
-  padding: 7px 15px;
+/* 三种按钮共用一套尺寸、过渡与按压反馈，只在填充上有差别。
+   之前 5/12、6/14、7/15 三种内边距并排时会差 2–4px，现在统一到 31px 高。 */
+.solid-btn,
+.line-btn,
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 31px;
+  padding: 0 14px;
+  border: 1px solid transparent;
   border-radius: 100px;
+  font-size: 11.5px;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  transition:
+    color var(--dur-2) var(--ease),
+    background-color var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.solid-btn {
   background: var(--amber);
   color: #1a1409;
-  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.03em;
-  transition: filter 0.16s ease, transform 0.16s ease;
 }
-.solid-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
-.line-btn {
-  padding: 6px 14px;
-  border-radius: 100px;
-  border: 1px solid var(--line-2);
-  font-size: 11.5px;
+.line-btn,
+.ghost-btn {
+  border-color: var(--line-2);
   color: var(--muted);
-  transition: all 0.16s ease;
 }
-.line-btn:hover { color: var(--ink); border-color: rgba(233, 169, 78, 0.45); }
+
+@media (hover: hover) {
+  .solid-btn:hover {
+    background: var(--amber-2);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(233, 169, 78, 0.2);
+  }
+  .line-btn:hover,
+  .ghost-btn:hover {
+    color: var(--ink);
+    border-color: rgba(233, 169, 78, 0.5);
+    background: rgba(233, 169, 78, 0.06);
+  }
+}
+
+/* 按下时缩一点，触摸屏也有反馈 */
+.solid-btn:active,
+.line-btn:active,
+.ghost-btn:active {
+  transform: scale(0.97);
+  box-shadow: none;
+}
 
 .dom-list { display: flex; flex-direction: column; gap: 10px; }
 .dom-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) 44px; gap: 8px; align-items: baseline; }
@@ -840,7 +890,7 @@ h1 em {
   font-family: var(--font-num);
   font-size: 15px;
   color: var(--amber-2);
-  transition: all 0.2s ease;
+  transition: border-color var(--dur-2) var(--ease), box-shadow var(--dur-2) var(--ease);
 }
 .stage.is-on .stage-no { border-color: var(--amber); box-shadow: 0 0 0 4px rgba(233, 169, 78, 0.1); }
 .stage-body { padding-top: 3px; }
@@ -910,7 +960,7 @@ h1 em {
   width: 100%;
   padding: 10px 32px 10px 13px;
   border-radius: 10px;
-  border: 1px solid var(--line-2);
+  border: 1px solid var(--line-control);
   background: rgba(31, 27, 23, 0.9) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0l5 6 5-6z' fill='%23a2957f'/></svg>") no-repeat right 13px center;
   color: var(--ink);
   font-size: 13px;
@@ -919,6 +969,10 @@ h1 em {
   outline: none;
 }
 .sel-field select:focus { border-color: rgba(233, 169, 78, 0.55); }
+.sel-field select:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
 .swap-btn {
   width: 44px; height: 44px;
   border-radius: 50%;
@@ -926,7 +980,8 @@ h1 em {
   display: grid; place-items: center;
   color: var(--muted);
   font-size: 15px;
-  transition: all 0.2s ease;
+  transition: color var(--dur-2) var(--ease), border-color var(--dur-2) var(--ease),
+    background-color var(--dur-2) var(--ease), transform var(--dur-1) var(--ease);
 }
 .swap-btn:hover { color: var(--amber); border-color: rgba(233, 169, 78, 0.5); transform: rotate(180deg); }
 
@@ -949,7 +1004,7 @@ h1 em {
   font-size: 11.5px;
   color: var(--muted);
   letter-spacing: 0.02em;
-  transition: all 0.16s ease;
+  transition: color var(--dur-2) var(--ease), background-color var(--dur-2) var(--ease);
 }
 .seg button.is-on { background: rgba(233, 169, 78, 0.16); color: var(--amber-2); }
 
@@ -1776,3 +1831,26 @@ html[lang="en"] .panel p { font-family: var(--font-ui); }
   .nav-no { display: none; }
   .nav-lab b { font-size: 12px; }
 }
+
+/* ============================================================
+   交互反馈：按下与表格行
+   ============================================================ */
+
+/* 悬停抬起 -2px，按下必须回落，否则手感像卡住 */
+.s-card:active,
+.hm-mod:active,
+.hm-style:active {
+  transform: translateY(0) scale(0.994);
+}
+.cat-item:active,
+.chip:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  /* 整行高亮，横向读数时不串行 */
+  .t-row:hover { background: rgba(236, 223, 203, 0.035); }
+}
+
+/* 风格卡可聚焦后，鼠标点击不应出现描边 */
+.s-card:focus:not(:focus-visible) { outline: none; }
