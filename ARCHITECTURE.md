@@ -40,6 +40,11 @@
 这一层的取舍写在「数据口径」弹窗里：论文没有逐格公布 226 项指标的实测浓度，
 站点按分位得分口径推算区间，并在界面上标明「不是实测数据库」。
 
+`data/ingredients.js` 是第二份**只影响说法、不影响计算**的数据：55 个化合物各对应一样日常原料
+（`isoamyl_acetate → 香蕉`、`diacetyl → 黄油`、`dms → 煮玉米`），带 emoji、中文说明与英文说明。
+它只在 `lab.html` 加载，其余五页不引用；查不到对应项时 `app.js` 回退到化合物原名。
+这样「小白模式」不需要复制一套化合物数据，也不会出现两个真相。
+
 ## 3. 页面层：六个真实文件
 
 ```
@@ -92,6 +97,17 @@ state = { view, styleId, detail, group, q, sel, seed, tab, from, to, rx }
 `charts.js` 手写 SVG 而不是用图表库：雷达、指纹条、风格轴都是定制形状，
 图表库要写配置去覆盖默认样式，代码量反而更多；手写 SVG 还能直接控制每个刻度和标签的位置。
 
+## 5.5 小白 / 专家两种模式
+
+模式是**视图层开关**，不进入数据层：
+
+- `state.mode` 存在 `localStorage('atlas-mode')`，默认 `novice`；
+- `isNovice()` 决定标题、目录、提示语、组合标签用哪套称呼；
+- 数值、评分、雷达图、含量区间完全不变——切换模式不会改变任何计算结果；
+- `ingOf(c)` / `ingName(c)` / `ingNote(c)` 三个函数是唯一的口径入口，其余代码不直接读 `BEER_INGREDIENTS`。
+
+这样做的好处是答辩时能讲清楚：「模式只是换了一套 label，模型没变」。
+
 ## 6. 中英切换
 
 `i18n.js` 不做模板字符串替换，而是遍历文本节点、整句匹配 `data/i18n-en.js`：
@@ -108,6 +124,15 @@ state = { view, styleId, detail, group, q, sel, seed, tab, from, to, rx }
 `reactor.js` 用 Web Animations API（`element.animate()`），不用 CSS transition。
 原因：面板每次选择都整段重画，新节点没有「旧值 → 新值」的起点，CSS transition 不会触发。
 WAAPI 可以在节点插入后的同一帧手动指定 `from`，补间才成立。
+
+试饮场景的立体感不靠 WebGL：瓶身是柱面渐变（两侧亮、中间透），瓶口和底座各压一个椭圆，
+台面有厚度与投影，小人的皮肤用径向渐变（光源在左上），头发、毛衣同理。
+整块 SVG 再套一层 `perspective`，鼠标移动时按 ±5° 转头，形成视差；角度很小，
+不会影响读数，`prefers-reduced-motion` 下直接关掉。
+
+动画分两段：入瓶（飞滴 → 涟漪 → 液面与颜色补间 → 气泡）和试饮（举杯 → 头后仰 7° → 放下 → 奶泡）。
+两段都用 WAAPI，`sip()` 的旋转中心用 `transform-box: view-box` 固定在手的位置，
+缩放后仍然对得上。
 
 `prefers-reduced-motion` 下所有位移和延迟归零，只保留最终状态——这是可访问性要求，
 不是可选项。
