@@ -189,14 +189,14 @@
       '<path d="M-6 8 C8 12 14 26 8 38" stroke="#465a32" stroke-width="1.4" fill="none"/>' +
       "</g>";
 
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="120 130 1080 400" preserveAspectRatio="xMidYMid meet" role="img">' + s + "</svg>";
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="120 130 1080 400" preserveAspectRatio="xMidYMid meet" role="img" aria-label="啤酒杯插画">' + s + "</svg>";
   }
 
   /* 卡片插画 */
   function card(kind) {
     var s = '<g transform="translate(200 182) scale(1.14) translate(-200 -182)">' +
       glassGroup(kind, { glow: true }) + "</g>";
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="102 26 300 276" preserveAspectRatio="xMidYMid meet" role="img">' + s + "</svg>";
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="102 26 300 276" preserveAspectRatio="xMidYMid meet" aria-hidden="true">' + s + "</svg>";
   }
 
   /* 小图标：首页五个入口 */

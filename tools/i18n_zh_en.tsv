@@ -1,4 +1,4 @@
-# 中文原文<TAB>英文。改完运行 python tools/build_i18n.py 生成 data/i18n-en.js
+﻿# 中文原文<TAB>英文。改完运行 python tools/build_i18n.py 生成 data/i18n-en.js
 含量区间为论文分位得分口径下的相对量：以该化合物在 250 款样本中的基准浓度为 100%，按风格感官画像与化合物—感官敏感度换算，区间取基准的 ±20%～±30%。论文未逐格公布 226 项指标在 22 个风格上的实测浓度，绝对值仅用于量级对照；论文直接给出的 d 值、位移与阈值均按原文标注。	Content ranges are relative values on the paper's quantile-score scale: 100% is the compound's baseline concentration across 250 samples, converted through the style's sensory profile and the compound–sensory sensitivity, with each range spanning ±20% to ±30% of baseline. The paper does not publish measured concentrations for all 226 indicators across the 22 styles, so absolute values serve only as order-of-magnitude reference. Where the paper states d values, displacements or thresholds directly, they are quoted verbatim.
 本页是论文结论的可视化与推演，不是实测数据库。感官画像为 0–6 相对分级，跨风格比较可比、绝对值不可外推；迁移清单给出方向与量级，工艺放大前仍需以实测浓度复核。论文自身亦声明：dms 与 diacetyl 两个维度的标签与化学测量脱节，其名义化合物与评分的秩相关仅 0.09 与 −0.10。	This page visualises and extrapolates the paper's conclusions; it is not a measured database. Sensory profiles are a 0–6 relative scale — comparable across styles, but absolute values should not be extrapolated. The transfer list gives direction and magnitude; confirm against measured concentrations before scaling a brew. The paper itself notes that the dms and diacetyl dimensions drift from their chemical measurements, with rank correlations of only 0.09 and −0.10.
 Pils/Lager → Tripel 的位移为 11.74 个欧氏单位，226 个化合物中 93 个 |Δz| > 0.5、216 个有非零位移；把缺陷约束内嵌后位移只增加 1.3%，判别概率由 0.384 微降至 0.364。表 14 给出 11 个供体的平均前 6 位。	The Pils/Lager → Tripel displacement is 11.74 Euclidean units: of 226 compounds, 93 have |Δz| > 0.5 and 216 move at all. Embedding the defect constraint adds only 1.3% to the displacement, while classification probability slips from 0.384 to 0.364. Table 14 gives the top six averaged over 11 donors.
@@ -31,7 +31,7 @@ Tripel / Kriek / Lambic / Pils 的正负各 5 位，单位 Cohen's d	Top five in
 以大量酒花投放与干投为核心，柑橘、松脂与热带水果层层堆叠，苦味干净而持续。	Built on heavy hopping and dry hopping: citrus, resin and tropical fruit stack in layers, with a clean and persistent bitterness.
 自然发酵、长时间桶陈，乳酸与乙酸共同构成本能的酸，混着谷仓与皮革的野性。	Spontaneous fermentation and long barrel ageing: lactic and acetic acid build the instinctive sourness, mixed with the wildness of barnyard and leather.
 基于多输出偏最小二乘、共表达网络与风格条件生成模型的啤酒风味解析与调控	Beer flavour analysis and regulation based on multi-output partial least squares, co-expression networks and a style-conditional generative model
-左栏是论文涉及的 55 个风味化合物。点击加入或移除，右侧会实时给出	The left column holds the paper's 55 flavour compounds. Click to add or remove; the right side updates live with
+目录里是论文涉及的 55 个风味化合物。点击加入或移除，旁边的面板会实时给出	The catalogue holds the paper's 55 flavour compounds. Click to add or remove; the panel beside it updates live with
 缺陷化合物，阈值 19 µg/L 低于样本中位数 24.2 µg/L	Defect compound; the threshold of 19 µg/L sits below the sample median of 24.2 µg/L
 论文第三问把风格写成一条有化学含义的轴：从皮尔森/拉格的质心出发，沿	The paper's third question writes style as a chemically meaningful axis: starting from the Pils/Lager centroid, moving along
 低温长时发酵的淡色拉格，干净的麦芽底味上浮着草本酒花香，收口干爽。	A pale lager fermented cool and slow: clean malt under herbal hop, dry finish.
@@ -713,3 +713,12 @@ Tripel 的原料、工艺与化合物因果链	Ingredients, process and compound
 很好喝	Delicious
 从左侧挑一个化合物，看它落进瓶里是什么味道	Pick a compound on the left and see what it tastes like
 按 12 条感官轴的愉悦度加权	weighted by the pleasantness of the 12 sensory axes
+跳到主内容	Skip to main content
+返回首页	Back to home
+主导航	Main navigation
+站点导航	Site navigation
+风格库	Style library
+GitHub 仓库	GitHub repository
+内容依据论文表格整理；含量区间按分位得分口径推算，不是实测数据库。	Content compiled from the paper's tables; ranges are estimated on a percentile-score basis, not a measured database.
+还没有化合物。可以从目录逐个加入，或点「载入该风格的特征组合」。	No compounds yet. Add them one by one from the catalogue, or load this style's signature set.
+啤酒杯插画	Illustration of beer glasses

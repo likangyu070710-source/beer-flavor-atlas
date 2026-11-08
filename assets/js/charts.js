@@ -144,7 +144,7 @@
       g += `<text x="${r1(x)}" y="${base + (m.row === 2 ? 58 : 38)}" fill="${m.color}" font-size="10"
              text-anchor="${m.anchor || "middle"}" font-family="var(--font-ui)">${m.label}</text>`;
     });
-    return `<svg ${NS} viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block" preserveAspectRatio="xMidYMid meet">
+    return `<svg ${NS} viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
       <defs><linearGradient id="bandGrad" x1="0" x2="1"><stop offset="0" stop-color="#e9a94e" stop-opacity=".22"/><stop offset="1" stop-color="#e9a94e" stop-opacity=".05"/></linearGradient></defs>${g}</svg>`;
   }
 
@@ -175,7 +175,7 @@
     points.forEach((p) => {
       g += `<circle cx="${r1(X(p[0]))}" cy="${r1(Y(p[1]))}" r="2.4" fill="${color}"/>`;
     });
-    return `<svg ${NS} viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">${g}</svg>`;
+    return `<svg ${NS} viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true">${g}</svg>`;
   }
 
   /* ---------- 环形进度 ---------- */
@@ -184,7 +184,7 @@
     const size = opt.size || 74, sw = opt.stroke || 5;
     const r = (size - sw) / 2, c = 2 * Math.PI * r;
     const p = Math.max(0, Math.min(100, percent));
-    return `<svg ${NS} viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+    return `<svg ${NS} viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" aria-hidden="true">
       <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="rgba(236,223,203,.09)" stroke-width="${sw}"/>
       <circle cx="${size / 2}" cy="${size / 2}" r="${r}" fill="none" stroke="${opt.color || "#e9a94e"}" stroke-width="${sw}"
         stroke-linecap="round" stroke-dasharray="${r1((c * p) / 100)} ${r1(c)}" transform="rotate(-90 ${size / 2} ${size / 2})"/>
@@ -204,7 +204,7 @@
       g += `<rect x="${r1(x)}" y="0" width="${r1(Math.max(ww - 2, 1))}" height="${h}" rx="2" fill="${d.color}"/>`;
       x += ww;
     });
-    return `<svg ${NS} viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none">${g}</svg>`;
+    return `<svg ${NS} viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none" aria-hidden="true">${g}</svg>`;
   }
 
   window.Charts = { radar, miniRadar, miniBars, axisPlot, line, ring, stack, SHORT };

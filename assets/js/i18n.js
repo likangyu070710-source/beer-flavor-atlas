@@ -258,7 +258,14 @@
     zh: "啤酒风味图谱 · Beer Flavor Atlas",
     en: "Beer Flavor Atlas · 22 styles, 55 compounds",
   };
-  function setTitle() { document.title = TITLES[lang]; }
+  /* 每个页面在 <body> 上带自己的中英标题，切换语言时同步改 <title>，
+     否则六个页面在英文模式下会共用一个标题。 */
+  function setTitle() {
+    var b = document.body;
+    var zh = (b && b.dataset.titleZh) || TITLES.zh;
+    var en = (b && b.dataset.titleEn) || TITLES.en;
+    document.title = lang === "en" ? en : zh;
+  }
 
   function init() {
     observe();
