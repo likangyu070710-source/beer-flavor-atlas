@@ -382,7 +382,7 @@ h1 em {
 /* ---------------- 风格卡片 ---------------- */
 .grid-styles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 12px;
 }
 .s-card {
@@ -2061,4 +2061,145 @@ body[data-page="lab"] .panel {
   /* 三个数字挤在一行，别让最后一项单独换行 */
   .hm-stats { gap: 18px; }
   .hm-stat b { font-size: 19px; }
+}
+
+/* ============================================================
+   22 种风格照片
+   ============================================================ */
+.s-photo {
+  margin: -15px -15px 0;
+  overflow: hidden;
+  background: #0d0b09;
+  border-bottom: 1px solid var(--line);
+}
+.s-photo img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: center 46%;
+  transform: scale(1.01);
+  transition: transform 0.6s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+@media (hover: hover) {
+  .s-card:hover .s-photo img { transform: scale(1.06); }
+}
+
+.d-main {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.d-photo {
+  margin: 0;
+  align-self: stretch;
+  min-height: 340px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-m);
+  overflow: hidden;
+  background: #0d0b09;
+}
+.d-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 50%;
+}
+
+.hm-style-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  object-position: center 50%;
+  transition: transform 0.6s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+@media (hover: hover) {
+  .hm-style:hover .hm-style-art img { transform: scale(1.05); }
+}
+
+@media (max-width: 900px) {
+  .d-photo { min-height: 0; }
+  .d-photo img { height: auto; aspect-ratio: 16 / 10; }
+}
+
+/* ============================================================
+   实验室页的“控制台”皮肤：让 2D 与 3D 舱同一套语言
+   ============================================================ */
+.lab-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: -6px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(95, 227, 208, 0.16);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: #6f9d99;
+}
+.lab-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #5fe3d0;
+  box-shadow: 0 0 8px #5fe3d0;
+  animation: lab-status-pulse 2s ease-in-out infinite;
+}
+@keyframes lab-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.lab-status span { color: #557874; letter-spacing: 0.1em; }
+.lab-status b {
+  margin-left: auto;
+  padding: 2px 7px;
+  border: 1px solid rgba(95, 227, 208, 0.28);
+  border-radius: 2px;
+  font-weight: 400;
+  color: #8fd3c7;
+  letter-spacing: 0.12em;
+}
+
+body[data-page="lab"] .panel { position: relative; }
+body[data-page="lab"] .panel::before,
+body[data-page="lab"] .panel::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  pointer-events: none;
+  border-color: rgba(95, 227, 208, 0.4);
+  border-style: solid;
+}
+body[data-page="lab"] .panel::before {
+  top: 5px;
+  left: 5px;
+  border-width: 1px 0 0 1px;
+}
+body[data-page="lab"] .panel::after {
+  right: 5px;
+  bottom: 5px;
+  border-width: 0 1px 1px 0;
+}
+body[data-page="lab"] .rx-panel {
+  border-color: rgba(95, 227, 208, 0.22);
+  box-shadow: 0 0 0 1px rgba(95, 227, 208, 0.04), 0 26px 52px -40px rgba(0, 0, 0, 0.95);
+}
+body[data-page="lab"] .rx-panel .h2::before {
+  content: "◉";
+  margin-right: 6px;
+  font-size: 8px;
+  vertical-align: 2px;
+  color: #5fe3d0;
+}
+body[data-page="lab"] .rx-panel .rx-kicker { color: #6f9d99; }
+
+@media (max-width: 640px) {
+  .lab-status { font-size: 8px; letter-spacing: 0.1em; }
+  .lab-status span { display: none; }
 }

@@ -116,7 +116,12 @@ def nav_items(current):
 
 
 ING_DATA = '\n<script src="data/ingredients.js"></script>'
-INTRO_HEAD = '<link rel="stylesheet" href="assets/css/intro.css">'
+LAB3D_HEAD = '\n<link rel="stylesheet" href="assets/css/lab3d.css">'
+LAB3D_SCRIPT = (
+    '\n<script src="assets/vendor/three.min.js"></script>'
+    '\n<script src="assets/js/lab3d.js"></script>'
+)
+INTRO_HEAD = '\n<link rel="stylesheet" href="assets/css/intro.css">'
 INTRO_SCRIPT = '<script src="assets/js/intro.js"></script>'
 
 TEMPLATE = """<!DOCTYPE html>
@@ -140,8 +145,7 @@ TEMPLATE = """<!DOCTYPE html>
 <meta property="og:url" content="https://likangyu070710-source.github.io/beer-flavor-atlas/@@FILE@@">
 <meta name="twitter:card" content="summary_large_image">
 <noscript><style>.intro{display:none !important}</style></noscript>
-<link rel="stylesheet" href="assets/css/style.css">
-@@INTRO_HEAD@@
+<link rel="stylesheet" href="assets/css/style.css">@@INTRO_HEAD@@@@LAB3D_HEAD@@
 </head>
 <body data-page="@@KEY@@" data-title-zh="@@TITLE@@" data-title-en="@@TITLE_EN@@">
 <a class="skip-link" href="#main">跳到主内容</a>
@@ -222,7 +226,7 @@ TEMPLATE = """<!DOCTYPE html>
 <script src="assets/js/art.js"></script>
 <script src="assets/js/reactor.js"></script>
 <script src="assets/js/pages.js"></script>
-<script src="assets/js/app.js"></script>
+<script src="assets/js/app.js"></script>@@LAB3D_SCRIPT@@
 @@INTRO_SCRIPT@@
 </body>
 </html>
@@ -263,6 +267,8 @@ def main():
             .replace("@@ING_DATA@@", ING_DATA if p["key"] == "lab" else "")
             .replace("@@FILE@@", p["file"])
             .replace("@@INTRO_HEAD@@", INTRO_HEAD if p["key"] == "home" else "")
+            .replace("@@LAB3D_HEAD@@", LAB3D_HEAD if p["key"] == "lab" else "")
+            .replace("@@LAB3D_SCRIPT@@", LAB3D_SCRIPT if p["key"] == "lab" else "")
             .replace("@@INTRO@@", INTRO_HTML if p["key"] == "home" else "")
             .replace("@@INTRO_SCRIPT@@", INTRO_SCRIPT if p["key"] == "home" else "")
             .replace("@@FAVICON@@", FAVICON)

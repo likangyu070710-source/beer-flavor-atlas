@@ -1,0 +1,526 @@
+/* ============================================================
+   3D 发酵舱：全屏覆盖层 + HUD
+   只服务于 lab 页的「进入 3D 实验室」，不参与常规布局。
+   ============================================================ */
+
+.lab3d-enter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 31px;
+  padding: 0 15px;
+  border-radius: 100px;
+  background: linear-gradient(120deg, #e9a94e, #f6cd85);
+  color: #1a1409;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  transition: transform var(--dur-1) var(--ease), box-shadow var(--dur-2) var(--ease);
+  box-shadow: 0 0 0 0 rgba(233, 169, 78, 0);
+}
+.lab3d-enter::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #1a1409;
+  box-shadow: 0 0 0 3px rgba(26, 20, 9, 0.16);
+  animation: l3d-blink 2.4s ease-in-out infinite;
+}
+@keyframes l3d-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+@media (hover: hover) {
+  .lab3d-enter:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px -8px rgba(233, 169, 78, 0.55);
+  }
+}
+.lab3d-enter:active { transform: scale(0.97); }
+
+/* ---------------- 全屏层 ---------------- */
+.l3d {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: #04070a;
+  color: #e8f4f4;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.45s cubic-bezier(0.22, 0.8, 0.3, 1), visibility 0.45s;
+  overflow: hidden;
+}
+.l3d.is-open { opacity: 1; visibility: visible; }
+
+.l3d canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+.l3d.is-dragging canvas { cursor: grabbing; }
+.l3d.is-over-bottle canvas { cursor: copy; }
+
+/* 扫描线与暗角，给画面一点“仪器”质感 */
+.l3d-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 46%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.l3d-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  pointer-events: none;
+}
+.l3d-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #9fded6;
+}
+.l3d-brand .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #5fe3d0;
+  box-shadow: 0 0 10px #5fe3d0;
+  animation: l3d-pulse 1.8s ease-in-out infinite;
+}
+@keyframes l3d-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.75); }
+}
+.l3d-brand i {
+  font-style: normal;
+  color: #6f8f8c;
+  letter-spacing: 0.1em;
+}
+.l3d-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+}
+.l3d-modes {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(95, 227, 208, 0.25);
+  border-radius: 100px;
+  background: rgba(6, 14, 16, 0.6);
+  backdrop-filter: blur(6px);
+}
+.l3d-modes button {
+  min-height: 24px;
+  padding: 0 11px;
+  border-radius: 100px;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: #7fa5a2;
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+.l3d-modes button[aria-pressed="true"] {
+  color: #0a1416;
+  background: #5fe3d0;
+}
+.l3d-exit {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(95, 227, 208, 0.3);
+  border-radius: 100px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #a8ccc8;
+  background: rgba(6, 14, 16, 0.6);
+  backdrop-filter: blur(6px);
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.l3d-exit:hover { color: #eafffb; border-color: rgba(95, 227, 208, 0.65); background: rgba(14, 32, 34, 0.8); }
+
+/* ---------------- 左右信息栏 ---------------- */
+.l3d-left,
+.l3d-right {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 232px;
+  padding: 14px 15px;
+  border: 1px solid rgba(95, 227, 208, 0.16);
+  border-radius: 3px;
+  background: linear-gradient(160deg, rgba(8, 18, 20, 0.82), rgba(5, 11, 13, 0.55));
+  backdrop-filter: blur(8px);
+  pointer-events: auto;
+}
+.l3d-left { left: 22px; }
+.l3d-right { right: 22px; width: 210px; }
+
+/* 角标：科技界面的关键细节，成本只是一条渐变边 */
+.l3d-left::before,
+.l3d-right::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 18px;
+  height: 18px;
+  border-top: 1px solid #5fe3d0;
+  border-left: 1px solid #5fe3d0;
+  opacity: 0.7;
+}
+.l3d-left::after,
+.l3d-right::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 18px;
+  height: 18px;
+  border-right: 1px solid #5fe3d0;
+  border-bottom: 1px solid #5fe3d0;
+  opacity: 0.4;
+}
+
+.l3d-cap {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: #6f9d99;
+  margin-bottom: 10px;
+}
+.l3d-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  max-height: 220px;
+  overflow: auto;
+  padding-right: 2px;
+}
+.l3d-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  padding: 4px 7px;
+  border: 1px solid rgba(95, 227, 208, 0.2);
+  border-radius: 3px;
+  font-size: 10.5px;
+  color: #b7d8d4;
+  background: rgba(10, 26, 28, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.l3d-chip b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; }
+.l3d-chip:hover { border-color: rgba(233, 169, 78, 0.55); background: rgba(30, 24, 12, 0.6); }
+.l3d-chip .x { color: #6f8f8c; font-family: var(--font-mono); }
+.l3d-empty { font-size: 11px; line-height: 1.7; color: #6f8f8c; }
+
+.l3d-hint {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(95, 227, 208, 0.14);
+  font-size: 10px;
+  line-height: 1.75;
+  color: #6f8f8c;
+}
+.l3d-hint b { color: #9fded6; font-weight: 500; }
+
+.l3d-score-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: #6f9d99;
+}
+.l3d-score {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin: 2px 0 2px;
+}
+.l3d-score b {
+  font-family: var(--font-num);
+  font-size: 52px;
+  line-height: 1;
+  font-weight: 400;
+  color: #f6cd85;
+  text-shadow: 0 0 24px rgba(233, 169, 78, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+.l3d-score span {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: #6f8f8c;
+}
+.l3d-verdict {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 100px;
+  border: 1px solid rgba(95, 227, 208, 0.3);
+  font-size: 10.5px;
+  color: #9fded6;
+}
+.l3d-verdict[data-ex="0"],
+.l3d-verdict[data-ex="1"] { color: #f0a08a; border-color: rgba(240, 120, 90, 0.45); }
+.l3d-verdict[data-ex="4"] { color: #f6cd85; border-color: rgba(233, 169, 78, 0.5); background: rgba(233, 169, 78, 0.1); }
+.l3d-focus {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #eafffb;
+  line-height: 1.35;
+}
+.l3d-focus i {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  color: #6f9d99;
+}
+.l3d-note {
+  margin-top: 8px;
+  font-size: 10.5px;
+  line-height: 1.7;
+  color: #8fb3af;
+}
+
+/* 底部状态条 */
+.l3d-bottom {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  z-index: 3;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 14px;
+  border: 1px solid rgba(95, 227, 208, 0.16);
+  border-radius: 100px;
+  background: rgba(6, 14, 16, 0.65);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  color: #7fa5a2;
+  white-space: nowrap;
+}
+.l3d-bottom .l3d-bar {
+  width: 92px;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(95, 227, 208, 0.16);
+  overflow: hidden;
+}
+.l3d-mini { display: none; }
+.l3d-bottom .l3d-bar i {
+  display: block;
+  height: 100%;
+  width: 16%;
+  background: linear-gradient(90deg, #5fe3d0, #e9a94e);
+  transition: width 0.5s cubic-bezier(0.22, 0.8, 0.3, 1);
+}
+
+/* ---------------- 开屏加载 ---------------- */
+.l3d-loading {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 22px;
+  background:
+    radial-gradient(560px 420px at 50% 46%, rgba(24, 78, 82, 0.35), transparent 70%),
+    radial-gradient(420px 320px at 50% 46%, rgba(233, 169, 78, 0.1), transparent 72%),
+    #04070a;
+  transition: opacity 0.55s ease, visibility 0.55s;
+}
+.l3d-loading.is-done { opacity: 0; visibility: hidden; }
+.l3d-loader {
+  position: relative;
+  width: 158px;
+  height: 158px;
+}
+.l3d-ring {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(95, 227, 208, 0.18);
+  border-radius: 50%;
+}
+.l3d-ring:nth-child(1) {
+  border-top-color: #5fe3d0;
+  animation: l3d-spin 1.15s linear infinite;
+}
+.l3d-ring:nth-child(2) {
+  inset: 13px;
+  border-right-color: #e9a94e;
+  animation: l3d-spin 1.7s linear infinite reverse;
+}
+.l3d-ring:nth-child(3) {
+  inset: 27px;
+  border-bottom-color: rgba(95, 227, 208, 0.85);
+  animation: l3d-spin 2.3s linear infinite;
+}
+@keyframes l3d-spin { to { transform: rotate(360deg); } }
+.l3d-core {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-num);
+  font-size: 30px;
+  letter-spacing: 0.06em;
+  color: #eafffb;
+  text-shadow: 0 0 22px rgba(95, 227, 208, 0.6);
+}
+.l3d-core small {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.34em;
+  color: #5fe3d0;
+  text-align: center;
+  margin-top: 2px;
+}
+.l3d-load-text { text-align: center; width: 280px; }
+.l3d-load-text b {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: #cfeeea;
+}
+.l3d-load-text .l3d-stage {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  color: #6f9d99;
+  min-height: 14px;
+}
+.l3d-progress {
+  margin-top: 12px;
+  height: 2px;
+  background: rgba(95, 227, 208, 0.14);
+  overflow: hidden;
+}
+.l3d-progress i {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #5fe3d0, #e9a94e);
+  box-shadow: 0 0 12px rgba(95, 227, 208, 0.6);
+  transition: width 0.12s linear;
+}
+.l3d-pct {
+  display: block;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: #6f8f8c;
+  font-style: normal;
+}
+.l3d-skip {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  padding: 6px 12px;
+  border: 1px solid rgba(95, 227, 208, 0.22);
+  border-radius: 100px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  color: #7fa5a2;
+  background: transparent;
+}
+.l3d-skip:hover { color: #eafffb; border-color: rgba(95, 227, 208, 0.5); }
+
+.l3d-error {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  text-align: center;
+  padding: 30px;
+  background: #04070a;
+}
+.l3d-error[hidden] { display: none; }
+.l3d-error b { font-size: 15px; color: #f0a08a; letter-spacing: 0.04em; }
+.l3d-error p { margin: 0; max-width: 34em; font-size: 12px; line-height: 1.8; color: #8fb3af; }
+
+body.l3d-lock { overflow: hidden; }
+
+@media (max-width: 900px) {
+  .l3d-left { display: none; }
+  .l3d-right { display: none; }
+  .l3d-brand i { display: none; }
+  .l3d-top { padding: 12px 14px; }
+  .l3d-bottom { bottom: 14px; font-size: 8.5px; gap: 8px; }
+  .l3d-bottom .l3d-bar { width: 52px; }
+  .l3d-mini { display: inline; color: #f6cd85; letter-spacing: 0.04em; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .l3d-ring, .l3d-brand .dot { animation: none; }
+}
+
+/* 悬停标签：跟着指针走，替代每个罐子上的常驻牌子 */
+.l3d-tip {
+  position: absolute;
+  z-index: 5;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  transform: translate(14px, -50%);
+  padding: 6px 10px;
+  border: 1px solid rgba(95, 227, 208, 0.35);
+  border-radius: 2px;
+  background: rgba(4, 12, 14, 0.9);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.14s ease;
+}
+.l3d-tip.is-on { opacity: 1; }
+.l3d-tip b { display: block; font-size: 12px; font-weight: 500; color: #eafffb; letter-spacing: 0.02em; }
+.l3d-tip i {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.08em;
+  color: #6f9d99;
+}

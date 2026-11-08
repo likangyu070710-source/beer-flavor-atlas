@@ -199,7 +199,8 @@
       const s = SM[id];
       return (
         '<button class="hm-style" data-style="' + id + '">' +
-        '<span class="hm-style-art">' + A.card(id) + "</span>" +
+        '<span class="hm-style-art"><img src="images/styles/' + id + '.jpg" alt="' +
+        (isEn() ? s.en : s.cn) + '" loading="lazy" decoding="async" width="900" height="900"></span>' +
         '<span class="hm-style-body">' +
         '<span class="hm-style-top"><b>' + s.cn + "</b><i>" + (GRP[s.group] ? GRP[s.group].cn : "") + "</i></span>" +
         '<span class="hm-style-en">' + s.en + "</span>" +
@@ -266,6 +267,8 @@
         }).join("");
         return (
           '<article class="s-card" data-style="' + s.id + '" role="button" tabindex="0">' +
+          '<div class="s-photo"><img src="images/styles/' + s.id + '.jpg" alt="' +
+          (isEn() ? s.en : s.cn) + ' 啤酒照片" loading="lazy" decoding="async" width="900" height="900"></div>' +
           '<div class="s-top"><div><div class="s-name">' + s.cn + '</div><div class="s-en">' + s.en + "</div></div>" +
           '<span class="s-fam">' + GRP[s.group].cn + "</span></div>" +
           '<div class="s-body"><div class="s-radar">' + C.miniBars(vals, 62, 34) + "</div>" +
@@ -366,7 +369,7 @@
 
     el.innerHTML =
       '<button class="line-btn" data-back style="margin-bottom:18px">← 返回风格列表</button>' +
-      '<div class="d-hero"><div class="d-title"><div class="eyebrow">风格档案 · ' + s.en + "</div>" +
+      '<div class="d-hero"><div class="d-main"><div class="d-title"><div class="eyebrow">风格档案 · ' + s.en + "</div>" +
       "<h1>" + s.cn + "<em>" + s.en + "</em></h1>" +
       '<p class="d-desc">' + s.desc + "</p>" +
       '<div class="d-meta"><span class="tag tag-amber">' + GRP[s.group].cn + "</span>" +
@@ -376,7 +379,9 @@
       '<div class="note-actions" style="margin-top:10px">' +
       '<button class="solid-btn" data-lab>在化合物台打开 →</button>' +
       '<button class="line-btn" data-migrate>以此为迁移目标</button></div></div>' +
-      '<div class="radar-box">' + C.radar([{ values: vals, color: "#e9a94e", width: 1.9, dotR: 2.4 }], { axes: AX, size: 340 }) + "</div></div>" +
+      '<div class="radar-box">' + C.radar([{ values: vals, color: "#e9a94e", width: 1.9, dotR: 2.4 }], { axes: AX, size: 300 }) + "</div></div>" +
+      '<figure class="d-photo"><img src="images/styles/' + s.id + '.jpg" alt="' +
+      (isEn() ? s.en : s.cn) + ' 啤酒照片" loading="lazy" decoding="async" width="900" height="900"></figure></div>' +
 
       '<div class="metrics">' +
       metric("苦度", s.profile.bitter, "0–6") + metric("酯香·果香", s.profile.ester, "0–6") +
@@ -502,8 +507,10 @@
         ? "把 55 种化合物翻译成厨房里找得到的东西。点一样加进去，瓶里会多一层颜色，旁边的小人替你尝一口。"
         : "目录里是论文涉及的 55 个风味化合物。点击加入或移除，旁边的面板会实时给出<b>每种化合物的感官属性</b>，以及它相对所选风格的<b>影响强度与方向</b>——偏高意味着这一版比典型风格更浓，偏低则相反。") +
       "</p></div>" +
+      '<div class="lab-status"><i></i>LAB CONSOLE · LIVE<span>55 COMPOUNDS / 22 STYLES</span><b>2D + 3D</b></div>' +
       '<div class="toolbar"><div class="sel-field" style="max-width:280px;flex:1 1 240px"><label>风格语境</label>' +
       '<select id="labStyle">' + options + "</select></div>" +
+      '<button class="solid-btn lab3d-enter" data-open-3d>进入 3D 实验室</button>' +
       '<button class="line-btn" data-preset>' + (novice ? "来一杯经典配方" : "载入该风格的特征组合") + "</button>" +
       '<button class="line-btn" data-clear>清空</button>' +
       '<div class="mode-switch" role="group" aria-label="切换模式">' +
@@ -1333,6 +1340,11 @@
     if (e.target.closest(".nav-item")) return;
     const modeBtn = e.target.closest("[data-mode]");
     if (modeBtn) { setMode(modeBtn.dataset.mode); return; }
+    if (e.target.closest("[data-open-3d]")) {
+      if (window.Lab3D) window.Lab3D.open();
+      else showTip("3D 模块没有加载成功，2D 试饮台仍然可用", window.innerWidth / 2, 90);
+      return;
+    }
 
     if (state.view === "home") {
       const jump = e.target.closest("[data-go]");
@@ -1535,6 +1547,83 @@
   /* ---------------- 启动 ---------------- */
   /* 每页只渲染自己那一个视图；状态从地址参数与会话记忆里恢复，
      所以从风格库跳到化合物页，选中的风格和化合物不会丢。 */
+  /* ================= 3D 实验室接口 ================= */
+  /* 只暴露读数与“改选择”两个动作：3D 场景不复制任何化合物数据，
+     评分、颜色、液位仍然由这里算，避免出现第二套真相。 */
+  function labLabel(id) {
+    const c = CM[id];
+    if (!c) return null;
+    const g = ingOf(c);
+    const nov = isNovice();
+    return {
+      id: c.id,
+      cn: c.cn,
+      en: c.en,
+      main: nov && g ? (isEn() ? g.en : g.cn) : c.cn,
+      sub: nov && g ? c.cn : c.en,
+      emoji: g ? g.emoji : "•",
+      note: nov && g ? (isEn() ? g.noteEn : g.note) : c.note,
+      color: FAM[c.family].color,
+      family: FAM[c.family].cn,
+    };
+  }
+
+  function labSnapshot(focusId) {
+    const sel = state.sel.filter((id) => CM[id]);
+    let focus = focusId && CM[focusId] ? CM[focusId] : null;
+    if (!focus && sel.length) focus = CM[sel[0]];
+    const score = focus ? tasteScore(focus) : null;
+    const ex = focus ? tasteEx(score) : 2;
+    const lab = focus ? labLabel(focus.id) : null;
+    return {
+      focusId: focus ? focus.id : null,
+      name: lab ? lab.main : "",
+      sub: lab ? lab.sub : "",
+      note: lab ? lab.note : "",
+      score: score,
+      ex: ex,
+      verdict: focus ? TASTE_WORD[ex] : "",
+      level: sel.length ? 0.16 + 0.6 * Math.min(1, sel.length / 12) : 0.02,
+      color: focus ? FAM[focus.family].color : "#8a98a6",
+      count: sel.length,
+      ids: sel.slice(),
+      names: sel.map((id) => {
+        const l = labLabel(id);
+        return { id: id, name: l.main, emoji: l.emoji };
+      }),
+      mode: state.mode,
+      style: isEn() ? SM[state.styleId].en : SM[state.styleId].cn,
+    };
+  }
+
+  function labToggle(id) {
+    if (!CM[id]) return false;
+    const i = state.sel.indexOf(id);
+    if (i >= 0) state.sel.splice(i, 1);
+    else state.sel.push(id);
+    state.rx = { id: id, kind: "sync", from: null };
+    persist();
+    return state.sel.indexOf(id) >= 0;
+  }
+
+  function labSetMode(m) {
+    if (m !== "novice" && m !== "expert") return;
+    state.mode = m;
+    try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+    state.rx = { id: state.rx ? state.rx.id : null, kind: "sync", from: null };
+  }
+
+  window.AtlasLab = {
+    label: labLabel,
+    snapshot: labSnapshot,
+    toggle: labToggle,
+    setMode: labSetMode,
+    mode: () => state.mode,
+    styleKey: () => SM[state.styleId].key.slice(),
+    meta: () => ({ compounds: D.compounds, families: D.families, styles: D.styles }),
+    sync: () => { if (state.view === "lab") renderLab(); persist(); },
+  };
+
   /* ================= 实验室背景（只在 lab 页挂一层） ================= */
   /* 用一张固定定位的 SVG 画出墙、发酵罐、酒架与透视地面。
      它不接收事件、不参与布局，只负责让整页像待在酒厂里。 */
