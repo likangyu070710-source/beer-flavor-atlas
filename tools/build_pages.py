@@ -115,6 +115,7 @@ def nav_items(current):
     return "\n".join(out)
 
 
+ING_DATA = '\n<script src="data/ingredients.js"></script>'
 INTRO_HEAD = '<link rel="stylesheet" href="assets/css/intro.css">'
 INTRO_SCRIPT = '<script src="assets/js/intro.js"></script>'
 
@@ -215,7 +216,7 @@ TEMPLATE = """<!DOCTYPE html>
 <div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
 
 <script src="data/flavor-data.js"></script>
-<script src="data/i18n-en.js"></script>
+<script src="data/i18n-en.js"></script>@@ING_DATA@@
 <script src="assets/js/charts.js"></script>
 <script src="assets/js/i18n.js"></script>
 <script src="assets/js/art.js"></script>
@@ -259,6 +260,7 @@ def main():
             .replace("@@TITLE@@", html.escape(p["title"], quote=True))
             .replace("@@DESC@@", html.escape(p["desc"], quote=True))
             .replace("@@KEY@@", p["key"])
+            .replace("@@ING_DATA@@", ING_DATA if p["key"] == "lab" else "")
             .replace("@@FILE@@", p["file"])
             .replace("@@INTRO_HEAD@@", INTRO_HEAD if p["key"] == "home" else "")
             .replace("@@INTRO@@", INTRO_HTML if p["key"] == "home" else "")

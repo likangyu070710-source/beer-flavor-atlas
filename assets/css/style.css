@@ -1854,3 +1854,211 @@ html[lang="en"] .panel p { font-family: var(--font-ui); }
 
 /* 风格卡可聚焦后，鼠标点击不应出现描边 */
 .s-card:focus:not(:focus-visible) { outline: none; }
+
+/* ============================================================
+   实验室 3D 场景（lab 页）
+   ============================================================ */
+
+/* 整页背景：一层固定定位的 SVG，内容层浮在它上面 */
+.lab3d {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.lab3d svg { display: block; width: 100%; height: 100%; }
+.shell { position: relative; z-index: 1; }
+
+/* 面板做成半透明玻璃，让背景的发酵罐透出来一点 */
+body[data-page="lab"] .panel {
+  background: linear-gradient(168deg, rgba(33, 28, 23, 0.84), rgba(19, 16, 13, 0.68));
+  border-color: rgba(236, 223, 203, 0.13);
+  box-shadow: 0 26px 52px -40px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(246, 205, 133, 0.05);
+}
+
+/* 试饮台：给一点透视，鼠标移动时轻微转头 */
+.rx-panel .rx-wrap { perspective: 1200px; }
+.rx-wrap { grid-template-columns: minmax(0, 316px) minmax(0, 1fr); }
+.rx-stage {
+  max-width: 316px;
+  --rx-tx: 0deg;
+  --rx-ty: 0deg;
+  transform: rotateX(var(--rx-tx)) rotateY(var(--rx-ty));
+  transform-style: preserve-3d;
+  transition: transform 0.45s cubic-bezier(0.22, 0.8, 0.3, 1);
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rx-stage { transform: none; transition: none; }
+}
+
+/* 小人各组的旋转中心，用 viewBox 坐标，缩放后依然对得上 */
+.rx-head,
+.rx-sip { transform-box: view-box; }
+.rx-head { transform-origin: 272px 130px; }
+.rx-sip { transform-origin: 306px 184px; }
+.rx-foam { transform-box: fill-box; transform-origin: 50% 50%; }
+
+/* 小白模式下，标题后面那行化合物名用小字，不用衬线斜体 */
+.rx-name i.rx-comp {
+  font-family: var(--font-ui);
+  font-style: normal;
+  font-size: 11px;
+  color: var(--muted-2);
+}
+
+/* ---------------- 模式切换 ---------------- */
+.mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  padding: 3px;
+  border: 1px solid var(--line-control);
+  border-radius: 100px;
+  background: rgba(18, 15, 12, 0.7);
+}
+.mode-switch button {
+  min-height: 25px;
+  padding: 0 12px;
+  border-radius: 100px;
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  color: var(--muted);
+  white-space: nowrap;
+  transition:
+    color var(--dur-2) var(--ease),
+    background-color var(--dur-2) var(--ease),
+    box-shadow var(--dur-2) var(--ease);
+}
+@media (hover: hover) {
+  .mode-switch button:hover { color: var(--ink-2); }
+}
+.mode-switch button[aria-pressed="true"] {
+  color: var(--amber-2);
+  background: rgba(233, 169, 78, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(233, 169, 78, 0.3);
+}
+.mode-switch button:active { transform: scale(0.97); }
+
+/* ---------------- 小白模式的原料柜 ---------------- */
+.cat-item.is-ing { gap: 9px; padding: 5px 7px; }
+.cat-item span.cat-emoji {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  line-height: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.02) 62%),
+    rgba(233, 169, 78, 0.09);
+  box-shadow:
+    inset 0 0 0 1px rgba(236, 223, 203, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.cat-emoji.sm { flex: 0 0 22px; width: 22px; height: 22px; font-size: 13px; }
+.cat-nm {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.25;
+}
+.cat-nm b { font-weight: 500; font-size: 12px; color: var(--ink-2); }
+.cat-nm i {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.02em;
+  color: var(--muted-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cat-item.is-on .cat-nm b { color: var(--ink); }
+.cat-plus {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted-2);
+}
+.cat-item.is-on .cat-plus { color: var(--amber); }
+
+/* ============================================================
+   首页：更少的字，更大的话
+   ============================================================ */
+.hm-hero { padding: 38px 38px 30px; }
+.hm-hero h1 {
+  margin: 10px 0 14px;
+  font-size: clamp(34px, 4.3vw, 58px);
+  line-height: 1.12;
+  letter-spacing: -0.025em;
+  max-width: 8.5em;
+}
+.hm-hero .lede { font-size: 14.5px; max-width: 24em; }
+
+.hm-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+}
+.hm-link {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 13px;
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  font-size: 12px;
+  color: var(--muted);
+  transition:
+    color var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease),
+    background-color var(--dur-2) var(--ease),
+    transform var(--dur-1) var(--ease);
+}
+.hm-link i {
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: 9.5px;
+  color: var(--muted-2);
+}
+@media (hover: hover) {
+  .hm-link:hover {
+    color: var(--ink);
+    border-color: rgba(233, 169, 78, 0.42);
+    background: rgba(233, 169, 78, 0.06);
+  }
+}
+.hm-link:active { transform: scale(0.97); }
+
+@media (max-width: 900px) {
+  .hm-hero { padding: 28px 24px 24px; }
+  .hm-hero h1 { font-size: clamp(30px, 6vw, 42px); }
+}
+
+@media (max-width: 640px) {
+  .rx-wrap { grid-template-columns: 1fr; }
+  .rx-stage { max-width: 280px; }
+  .mode-switch { margin-left: 0; width: 100%; justify-content: center; }
+  .hm-hero h1 { font-size: clamp(28px, 9vw, 36px); }
+  .hm-links { gap: 5px; }
+  .hm-link { padding: 6px 11px; font-size: 11.5px; }
+}
+
+@media (max-width: 640px) {
+  /* 手机上目录别把试饮台推得太远：列表自身滚动，留出视野 */
+  .cat-scroll { max-height: 46vh; }
+}
+
+@media (max-width: 640px) {
+  /* 三个数字挤在一行，别让最后一项单独换行 */
+  .hm-stats { gap: 18px; }
+  .hm-stat b { font-size: 19px; }
+}

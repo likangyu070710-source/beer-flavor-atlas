@@ -15,8 +15,15 @@
   const PG = window.AtlasPages;
   const PAGE = (document.body && document.body.dataset.page) || "home";
 
+  const MODE_KEY = "atlas-mode";
+  function loadMode() {
+    try { return localStorage.getItem(MODE_KEY) === "expert" ? "expert" : "novice"; }
+    catch (e) { return "novice"; }
+  }
+
   const state = {
     view: PAGE,
+    mode: loadMode(),
     styleId: "tripel",
     detail: false,
     group: "all",
@@ -41,6 +48,32 @@
     t2n: 8, dms: 15, "4vg": 60, co2: 52, iso_alpha: 48, ethanol: 44, lactic_acid: 56,
   };
   const TASTE_WORD = ["难以下咽", "不太妙", "中规中矩", "不错", "很好喝"];
+
+  /* ================= 小白 / 专家两种说法 ================= */
+  const ING = (window.BEER_INGREDIENTS && window.BEER_INGREDIENTS.items) || {};
+  const INGF = (window.BEER_INGREDIENTS && window.BEER_INGREDIENTS.families) || {};
+  const isEn = () => window.ATLAS_LANG === "en";
+  const isNovice = () => state.mode !== "expert";
+  const ingOf = (c) => (c ? ING[c.id] || null : null);
+  function ingName(c) {
+    const g = ingOf(c);
+    return g ? (isEn() ? g.en : g.cn) : c.cn;
+  }
+  function ingNote(c) {
+    const g = ingOf(c);
+    return g ? (isEn() ? g.noteEn : g.note) : c.note;
+  }
+  function famName(f) {
+    if (isNovice() && INGF[f.id]) return isEn() ? INGF[f.id].en : INGF[f.id].cn;
+    return f.cn;
+  }
+  function setMode(m) {
+    if (m !== "novice" && m !== "expert") return;
+    state.mode = m;
+    try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+    state.rx = { id: state.rx ? state.rx.id : null, kind: "sync", from: null };
+    renderLab();
+  }
 
   function tasteScore(c) {
     if (!c) return null;
@@ -151,35 +184,25 @@
     const el = $("#view-home");
 
     const stats = [
-      ["250", "款啤酒"],
-      ["226", "项指标"],
+      ["55", "种原料"],
       ["22", "个风格"],
-      ["50", "维感官"],
+      ["226", "项指标"],
     ]
       .map((x) => '<div class="hm-stat"><b>' + x[0] + "</b><span>" + x[1] + "</span></div>")
       .join("");
 
-    const mods = HOME_MODS.map(
-      (m) =>
-        '<button class="hm-mod" data-go="' + m.v + '">' +
-        '<span class="hm-mod-ico">' + A.icon(m.icon) + "</span>" +
-        '<span class="hm-mod-no">' + m.n + "</span>" +
-        '<span class="hm-mod-t">' + m.t + "</span>" +
-        '<span class="hm-mod-d">' + m.d + "</span>" +
-        '<span class="hm-mod-go" aria-hidden="true">→</span>' +
-        "</button>"
+    const links = HOME_MODS.map(
+      (m) => '<button class="hm-link" data-go="' + m.v + '"><i>' + m.n + "</i>" + m.t + "</button>"
     ).join("");
 
     const gal = HOME_GAL.map((id) => {
       const s = SM[id];
-      const keys = s.key.slice(0, 2).map((k) => CM[k].cn).join(" · ");
       return (
         '<button class="hm-style" data-style="' + id + '">' +
         '<span class="hm-style-art">' + A.card(id) + "</span>" +
         '<span class="hm-style-body">' +
         '<span class="hm-style-top"><b>' + s.cn + "</b><i>" + (GRP[s.group] ? GRP[s.group].cn : "") + "</i></span>" +
         '<span class="hm-style-en">' + s.en + "</span>" +
-        '<span class="hm-style-keys">' + keys + "</span>" +
         "</span></button>"
       );
     }).join("");
@@ -189,32 +212,27 @@
       '<section class="hm-hero">' +
       '<div class="hm-hero-body">' +
       '<div class="eyebrow">00 / 首页 · Home</div>' +
-      "<h1>一杯啤酒里有 226\u00A0个可测的风味分子</h1>" +
-      '<p class="lede">从 250 款商业啤酒的化学谱与 50 维感官评分出发，把风格拆成能读、能调、能迁移的化合物组合。</p>' +
+      "<h1>属于自己的啤酒风格</h1>" +
+      '<p class="lede">22 个风格，55 种原料，一杯一杯试出来。</p>' +
       '<div class="hm-cta">' +
-      '<button class="solid-btn" data-go="style">进入风格库</button>' +
-      '<button class="line-btn" data-go="lab">直接调配方</button>' +
-      '<button class="link-btn" data-go="origin">看 Tripel 是怎么来的 →</button>' +
+      '<button class="solid-btn" data-go="lab">开始调配</button>' +
+      '<button class="line-btn" data-go="style">浏览风格</button>' +
       "</div>" +
       '<div class="hm-stats">' + stats + "</div>" +
       "</div>" +
       '<div class="hm-hero-art">' + A.hero() + "</div>" +
       "</section>" +
 
-      '<section class="hm-sec">' +
-      '<div class="hm-sec-head"><div class="hm-sec-t">五个入口<small>Five ways in</small></div>' +
-      '<span class="hm-sec-note">查风格、调组合、写描述、溯源、迁移</span></div>' +
-      '<div class="hm-mods">' + mods + "</div>" +
-      "</section>" +
+      '<nav class="hm-links" aria-label="五个入口">' + links + "</nav>" +
 
       '<section class="hm-sec">' +
       '<div class="hm-sec-head"><div class="hm-sec-t">四种风格，四种化学指纹<small>Four fingerprints</small></div>' +
-      '<span class="hm-sec-note">点开任一风格，看它的含量区间与论文指纹</span></div>' +
+      '<span class="hm-sec-note">点开看含量区间与指纹</span></div>' +
       '<div class="hm-gal">' + gal + "</div>" +
       "</section>" +
 
       '<section class="hm-quote">' +
-      "<p>内容依据论文表 5–27 整理，含量区间按分位得分口径推算；完整口径与出处见弹窗。</p>" +
+      "<p>内容依据论文表格整理；含量区间按分位得分口径推算。</p>" +
       '<button class="link-btn" data-open-scale>数据口径与出处 →</button>' +
       "</section>" +
       "</div>";
@@ -399,6 +417,8 @@
     const score = c ? tasteScore(c) : null;
     const ex = c ? tasteEx(score) : 2;
     const fam = c ? FAM[c.family] : null;
+    const g = ingOf(c);
+    const novice = isNovice() && !!g;
     const color = fam ? fam.color : "#8a98a6";
     const level = sel.length ? 0.16 + 0.6 * Math.min(1, sel.length / 12) : 0.02;
     const kind = rx.kind || "sync";
@@ -416,24 +436,33 @@
       (rx.from ? ' data-from="' + Math.round(rx.from.x) + "," + Math.round(rx.from.y) + '"' : "") + ">" +
       (R ? R.stage() : "") + "</div>" +
       '<div class="rx-side">' +
-      '<div class="rx-top"><span class="rx-kicker">口味评分</span>' +
+      '<div class="rx-top"><span class="rx-kicker">' + (novice ? "这一口的味道" : "口味评分") + "</span>" +
       (chip ? '<span class="rx-chip' + chipCls + '">' + chip + "</span>" : "") + "</div>" +
-      '<div class="rx-name">' + (c ? c.cn + "<i>" + c.en + "</i>" : "尚未加入化合物") + "</div>" +
+      '<div class="rx-name">' +
+      (c
+        ? (novice ? ingName(c) + '<i class="rx-comp">' + c.cn + "</i>" : c.cn + "<i>" + c.en + "</i>")
+        : (isNovice() ? "还没有加原料" : "尚未加入化合物")) +
+      "</div>" +
       '<div class="rx-scoreline"><b class="rx-num" data-ex="' + ex + '">' + (score == null ? "—" : score) + "</b>" +
       (score == null ? "" : "<small>/100</small>") +
       (c ? '<span class="rx-verdict" data-ex="' + ex + '">' + TASTE_WORD[ex] + "</span>" : "") + "</div>" +
       '<div class="rx-meter"><i style="width:' + (score == null ? 0 : score) + '%"></i></div>' +
       '<p class="rx-hint">' +
-      (c
-        ? "<b>" + (fam ? fam.cn : "") + "</b> · <span>按 12 条感官轴的愉悦度加权</span>"
-        : "<span>从左侧挑一个化合物，看它落进瓶里是什么味道</span>") +
+      (correctHint(c, novice, g, fam)) +
       "</p></div></div></div>"
     );
+  }
+
+  function correctHint(c, novice, g, fam) {
+    if (!c) return "<span>" + (isNovice() ? "从原料柜里挑一样，看它落进瓶里是什么味道" : "从左侧挑一个化合物，看它落进瓶里是什么味道") + "</span>";
+    if (novice) return ingNote(c);
+    return "<b>" + (fam ? fam.cn : "") + "</b> · <span>按 12 条感官轴的愉悦度加权</span>";
   }
 
   function renderLab() {
     const el = $("#view-lab");
     const s = SM[state.styleId];
+    const novice = isNovice();
     const sel = state.sel.filter((id) => CM[id]);
     const groups = D.families
       .map((f) => {
@@ -441,6 +470,15 @@
           .filter((c) => c.family === f.id)
           .map((c) => {
             const on = sel.indexOf(c.id) >= 0;
+            const g = ingOf(c);
+            if (novice && g) {
+              return (
+                '<button class="cat-item is-ing' + (on ? " is-on" : "") + '" data-cid="' + c.id + '">' +
+                '<span class="cat-emoji" aria-hidden="true">' + g.emoji + "</span>" +
+                '<span class="cat-nm"><b>' + ingName(c) + "</b><i>" + c.cn + "</i></span>" +
+                '<b class="cat-plus">' + (on ? "✓" : "+") + "</b></button>"
+              );
+            }
             return (
               '<button class="cat-item' + (on ? " is-on" : "") + '" data-cid="' + c.id + '">' +
               '<span class="cat-dot" style="background:' + f.color + '"></span><span>' + c.cn + "</span>" +
@@ -448,7 +486,7 @@
             );
           })
           .join("");
-        return '<div class="cat-group"><div class="cat-group-h"><span>' + f.cn + "</span><i>" + D.compounds.filter((c) => c.family === f.id).length + "</i></div>" + items + "</div>";
+        return '<div class="cat-group"><div class="cat-group-h"><span>' + famName(f) + "</span><i>" + D.compounds.filter((c) => c.family === f.id).length + "</i></div>" + items + "</div>";
       })
       .join("");
 
@@ -457,22 +495,57 @@
       .join("");
 
     el.innerHTML =
-      '<div class="view-head"><div class="eyebrow">02 / 化合物交互 · Compound lab</div>' +
-      "<h1>把配方拆成化合物<em>Build a profile</em></h1>" +
-      '<p class="lede">目录里是论文涉及的 55 个风味化合物。点击加入或移除，旁边的面板会实时给出<b>每种化合物的感官属性</b>，' +
-      "以及它相对所选风格的<b>影响强度与方向</b>——偏高意味着这一版比典型风格更浓，偏低则相反。</p></div>" +
+      '<div class="view-head"><div class="eyebrow">02 / ' + (novice ? "调配台 · Mix your own" : "化合物交互 · Compound lab") + "</div>" +
+      "<h1>" + (novice ? "调一杯自己的啤酒" : "把配方拆成化合物") + "<em>" + (novice ? "Mix your own" : "Build a profile") + "</em></h1>" +
+      '<p class="lede">' +
+      (novice
+        ? "把 55 种化合物翻译成厨房里找得到的东西。点一样加进去，瓶里会多一层颜色，旁边的小人替你尝一口。"
+        : "目录里是论文涉及的 55 个风味化合物。点击加入或移除，旁边的面板会实时给出<b>每种化合物的感官属性</b>，以及它相对所选风格的<b>影响强度与方向</b>——偏高意味着这一版比典型风格更浓，偏低则相反。") +
+      "</p></div>" +
       '<div class="toolbar"><div class="sel-field" style="max-width:280px;flex:1 1 240px"><label>风格语境</label>' +
       '<select id="labStyle">' + options + "</select></div>" +
-      '<button class="line-btn" data-preset>载入该风格的特征组合</button>' +
-      '<button class="line-btn" data-clear>清空</button></div>' +
-      '<div class="lab"><div class="catalog panel"><div class="panel-head"><div class="h2">化合物目录<small>55 compounds</small></div>' +
-      '<span class="panel-note">' + sel.length + " 项已选</span></div>" +
+      '<button class="line-btn" data-preset>' + (novice ? "来一杯经典配方" : "载入该风格的特征组合") + "</button>" +
+      '<button class="line-btn" data-clear>清空</button>' +
+      '<div class="mode-switch" role="group" aria-label="切换模式">' +
+      '<button type="button" data-mode="novice" aria-pressed="' + (novice ? "true" : "false") + '">小白模式</button>' +
+      '<button type="button" data-mode="expert" aria-pressed="' + (novice ? "false" : "true") + '">专家模式</button>' +
+      "</div></div>" +
+      '<div class="lab' + (novice ? " is-novice" : "") + '"><div class="catalog panel"><div class="panel-head"><div class="h2">' +
+      (novice ? "原料柜<small>55 ingredients</small>" : "化合物目录<small>55 compounds</small>") + "</div>" +
+      '<span class="panel-note">' + sel.length + (novice ? " 样已在瓶里" : " 项已选") + "</span></div>" +
       '<div class="search" style="max-width:none;margin-bottom:10px"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.6"/><path d="M10.4 10.4L14 14"/></svg>' +
-      '<input id="cq" type="search" placeholder="按名称筛选" value="' + (state.cq || "") + '"></div>' +
+      '<input id="cq" type="search" placeholder="' +
+      (novice
+        ? (isEn() ? "Search an ingredient, e.g. banana" : "找一样原料，比如香蕉")
+        : (isEn() ? "Filter by name" : "按名称筛选")) +
+      '" value="' + (state.cq || "") + '"></div>' +
       '<div class="cat-scroll" id="catScroll">' + groups + "</div></div>" +
       '<div class="lab-main">' + labScene(sel, s) + labSummary(sel, s) + labAttrs(sel, s) + labCompounds(sel, s) + "</div></div>";
 
     if (window.Reactor) window.Reactor.attach(el);
+
+    /* 舞台跟着指针转一点点：给 3D 场景一个视差，幅度小到不干扰读数 */
+    const stageEl = el.querySelector("[data-rx-stage]");
+    if (stageEl && !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+      let raf = 0;
+      stageEl.addEventListener("pointermove", (ev) => {
+        if (ev.pointerType === "touch") return;
+        const r = stageEl.getBoundingClientRect();
+        const dx = (ev.clientX - r.left) / r.width - 0.5;
+        const dy = (ev.clientY - r.top) / r.height - 0.5;
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          stageEl.style.setProperty("--rx-ty", (dx * 5).toFixed(2) + "deg");
+          stageEl.style.setProperty("--rx-tx", (-dy * 3.2).toFixed(2) + "deg");
+        });
+      });
+      stageEl.addEventListener("pointerleave", () => {
+        stageEl.style.setProperty("--rx-ty", "0deg");
+        stageEl.style.setProperty("--rx-tx", "0deg");
+      });
+    }
+
     if (state.rx) state.rx = { id: state.rx.id, kind: "sync", from: null };
 
     $("#labStyle").addEventListener("change", (e) => {
@@ -493,7 +566,9 @@
     const q = (state.cq || "").toLowerCase();
     $$("#catScroll .cat-item").forEach((it) => {
       const c = CM[it.dataset.cid];
-      const hit = !q || (c.cn + c.en).toLowerCase().indexOf(q) >= 0;
+      const g = ingOf(c);
+      const hay = c.cn + c.en + (g ? g.cn + g.en : "");
+      const hit = !q || hay.toLowerCase().indexOf(q) >= 0;
       it.style.display = hit ? "" : "none";
     });
     $$("#catScroll .cat-group").forEach((g) => {
@@ -507,7 +582,12 @@
     const vals = AX.map((a) => obj[a.id]);
     const match = sel.length ? matchStyle(vals, s) : 0;
     const pills = sel
-      .map((id) => '<span class="sel-pill">' + CM[id].cn + '<button data-rm="' + id + '" aria-label="移除">×</button></span>')
+      .map((id) => {
+        const c = CM[id];
+        const g = ingOf(c);
+        const label = isNovice() && g ? g.emoji + " " + ingName(c) : c.cn;
+        return '<span class="sel-pill">' + label + '<button data-rm="' + id + '" aria-label="移除">×</button></span>';
+      })
       .join("");
     return (
       '<div class="panel"><div class="panel-head"><div class="h2">当前组合<small>' + sel.length + ' compounds</small></div>' +
@@ -592,16 +672,21 @@
         const w = levelWord(d);
         const pct = clamp(Math.abs(d) / maxAbs * 50, 2, 50);
         const v = s.values[id];
+        const g = ingOf(c);
+        const nov = isNovice() && !!g;
         return (
-          '<div class="cp-card"><div class="cp-head"><span class="cat-dot" style="background:' + FAM[c.family].color + '"></span>' +
-          "<b>" + c.cn + "</b><i>" + c.en + "</i>" +
+          '<div class="cp-card"><div class="cp-head">' +
+          (nov
+            ? '<span class="cat-emoji sm" aria-hidden="true">' + g.emoji + "</span>"
+            : '<span class="cat-dot" style="background:' + FAM[c.family].color + '"></span>') +
+          "<b>" + (nov ? ingName(c) : c.cn) + "</b><i>" + (nov ? c.cn : c.en) + "</i>" +
           '<span class="cp-conc">' + rangeText(v[0], v[2], c.unit) + "</span>" +
           '<button class="cp-x" data-rm="' + id + '" aria-label="移除">×</button></div>' +
           '<div class="cp-body"><div class="attr-mini">' + attrPills(c, 4) + "</div>" +
           '<div class="cp-imp"><span class="dir dir-' + w[1] + '">' + (w[1] === "up" ? "▲" : w[1] === "down" ? "▼" : "—") + " " + w[0] + "</span>" +
           '<span class="impact-bar"><i class="' + (d >= 0 ? "pos" : "neg") + '" style="width:' + pct + '%"></i></span>' +
           '<span class="impact-val">' + (d > 0 ? "+" : "") + Math.round(d) + "%</span></div>" +
-          '<p class="cp-note">' + c.note + "</p></div></div>"
+          '<p class="cp-note">' + (nov ? ingNote(c) : c.note) + "</p></div></div>"
         );
       })
       .join("");
@@ -1246,6 +1331,8 @@
   document.addEventListener("click", (e) => {
     /* 导航是真实链接，交给浏览器处理；这里只兜底同页锚点 */
     if (e.target.closest(".nav-item")) return;
+    const modeBtn = e.target.closest("[data-mode]");
+    if (modeBtn) { setMode(modeBtn.dataset.mode); return; }
 
     if (state.view === "home") {
       const jump = e.target.closest("[data-go]");
@@ -1448,6 +1535,95 @@
   /* ---------------- 启动 ---------------- */
   /* 每页只渲染自己那一个视图；状态从地址参数与会话记忆里恢复，
      所以从风格库跳到化合物页，选中的风格和化合物不会丢。 */
+  /* ================= 实验室背景（只在 lab 页挂一层） ================= */
+  /* 用一张固定定位的 SVG 画出墙、发酵罐、酒架与透视地面。
+     它不接收事件、不参与布局，只负责让整页像待在酒厂里。 */
+  function mountLab3d() {
+    if (document.querySelector(".lab3d")) return;
+    const d = document.createElement("div");
+    d.className = "lab3d";
+    d.setAttribute("aria-hidden", "true");
+
+    /* 顶层的酒架：瓶子只画剪影，靠背后的暖光把轮廓托出来 */
+    const bottles = [];
+    for (let i = 0; i < 7; i++) {
+      const x = 1112 + i * 40;
+      bottles.push('<path d="M' + x + " 104h9v9c0 4 5 6 5 11v22h-19v-22c0-5 5-7 5-11z" + '" fill="#0c0a08"/>');
+    }
+    const lower = [];
+    for (let i = 0; i < 6; i++) {
+      const x = 1124 + i * 44;
+      lower.push('<path d="M' + x + " 214h9v9c0 4 5 6 5 11v24h-19v-24c0-5 5-7 5-11z" + '" fill="#0c0a08"/>');
+    }
+
+    d.innerHTML =
+      '<svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">' +
+        "<defs>" +
+          '<linearGradient id="lb-wall" x1="0" y1="0" x2="0.5" y2="1">' +
+            '<stop offset="0" stop-color="#2a221b"/><stop offset=".45" stop-color="#18130f"/><stop offset="1" stop-color="#0b0908"/>' +
+          "</linearGradient>" +
+          '<radialGradient id="lb-glow" cx=".5" cy=".5" r=".5">' +
+            '<stop offset="0" stop-color="#e9a94e" stop-opacity=".26"/>' +
+            '<stop offset=".55" stop-color="#e9a94e" stop-opacity=".07"/>' +
+            '<stop offset="1" stop-color="#e9a94e" stop-opacity="0"/>' +
+          "</radialGradient>" +
+          '<linearGradient id="lb-wood" x1="0" y1="0" x2="0" y2="1">' +
+            '<stop offset="0" stop-color="#57452f"/><stop offset="1" stop-color="#2b2119"/>' +
+          "</linearGradient>" +
+          '<radialGradient id="lb-vig" cx=".5" cy=".4" r=".75">' +
+            '<stop offset=".42" stop-color="#000" stop-opacity="0"/>' +
+            '<stop offset="1" stop-color="#000" stop-opacity=".66"/>' +
+          "</radialGradient>" +
+        "</defs>" +
+
+        '<rect width="1440" height="900" fill="url(#lb-wall)"/>' +
+        '<ellipse cx="1150" cy="150" rx="520" ry="330" fill="url(#lb-glow)"/>' +
+        '<ellipse cx="430" cy="70" rx="360" ry="240" fill="url(#lb-glow)" opacity=".5"/>' +
+
+        /* 墙面留缝，给一点厂房尺度 */
+        '<g stroke="rgba(236,223,203,.05)" stroke-width="2">' +
+          '<path d="M0 92h1440M0 186h1440M0 280h1440"/>' +
+          '<path d="M420 0v300M980 0v300"/>' +
+        "</g>" +
+
+        /* 右上的酒架：两层，上层在首屏内，下层被面板压住一半 */
+        '<g>' +
+          '<rect x="1088" y="148" width="336" height="7" rx="2" fill="url(#lb-wood)"/>' +
+          '<rect x="1088" y="148" width="336" height="1.4" fill="rgba(246,205,133,.35)"/>' +
+          '<g opacity=".9">' + bottles.join("") + "</g>" +
+          /* 两只杯子 */
+          '<path d="M1408 128h16v14a5 5 0 0 1-5 5h-6a5 5 0 0 1-5-5Z" fill="rgba(236,223,203,.16)" stroke="rgba(236,223,203,.34)" stroke-width="1"/>' +
+          '<path d="M1416 147v10M1411 157h10" stroke="rgba(236,223,203,.3)" stroke-width="1.4"/>' +
+          '<rect x="1088" y="258" width="336" height="6" rx="2" fill="url(#lb-wood)" opacity=".8"/>' +
+          '<g opacity=".55">' + lower.join("") + "</g>" +
+        "</g>" +
+
+        /* 吊灯：两根，暖光落在页面上方 */
+        '<g>' +
+          '<path d="M1186 0v34" stroke="rgba(236,223,203,.2)" stroke-width="1.4"/>' +
+          '<path d="M1172 48h28l-6-14h-16Z" fill="#2a211a" stroke="rgba(236,223,203,.26)" stroke-width="1"/>' +
+          '<ellipse cx="1186" cy="49" rx="6" ry="2.4" fill="#f6cd85" opacity=".9"/>' +
+          '<path d="M1172 50 L1140 236 h92 L1200 50Z" fill="#e9a94e" opacity=".05"/>' +
+          '<path d="M1330 0v22" stroke="rgba(236,223,203,.16)" stroke-width="1.2"/>' +
+          '<path d="M1318 34h24l-5-12h-14Z" fill="#2a211a" stroke="rgba(236,223,203,.2)" stroke-width="1"/>' +
+          '<ellipse cx="1330" cy="35" rx="5" ry="2" fill="#f6cd85" opacity=".7"/>' +
+          '<path d="M1318 36 L1294 190 h72 L1342 36Z" fill="#e9a94e" opacity=".035"/>' +
+        "</g>" +
+
+        /* 右侧的发酵罐，只露出罐身上半部 */
+        '<g opacity=".7">' +
+          '<rect x="1352" y="300" width="150" height="420" rx="26" fill="url(#lb-wood)" opacity=".5" stroke="rgba(236,223,203,.12)" stroke-width="2"/>' +
+          '<ellipse cx="1427" cy="300" rx="75" ry="14" fill="#3a2f23" opacity=".8" stroke="rgba(236,223,203,.14)" stroke-width="2"/>' +
+          '<path d="M1427 286v-46h-58" stroke="rgba(236,223,203,.2)" stroke-width="5" fill="none"/>' +
+        "</g>" +
+
+        /* 地面：只在下缘留一道暗影，暗示空间深度 */
+        '<rect y="878" width="1440" height="22" fill="#080706"/>' +
+        '<rect width="1440" height="900" fill="url(#lb-vig)"/>' +
+      "</svg>";
+    document.body.appendChild(d);
+  }
+
   function boot() {
     const saved = PG && PG.isMultiPage ? PG.read() : {};
     const q = new URLSearchParams(location.search);
@@ -1467,6 +1643,8 @@
     if (!state.sel.length) {
       state.sel = SM[state.styleId].key.slice(0, state.view === "lab" ? 8 : 6);
     }
+
+    if (PAGE === "lab") mountLab3d();
 
     syncCrumb();
     render();
