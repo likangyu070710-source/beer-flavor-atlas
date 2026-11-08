@@ -1550,11 +1550,11 @@
   /* ================= 3D 实验室接口 ================= */
   /* 只暴露读数与“改选择”两个动作：3D 场景不复制任何化合物数据，
      评分、颜色、液位仍然由这里算，避免出现第二套真相。 */
-  function labLabel(id) {
+  function labLabel(id, mode) {
     const c = CM[id];
     if (!c) return null;
     const g = ingOf(c);
-    const nov = isNovice();
+    const nov = mode ? mode !== "expert" : isNovice();
     return {
       id: c.id,
       cn: c.cn,
@@ -1564,17 +1564,17 @@
       emoji: g ? g.emoji : "•",
       note: nov && g ? (isEn() ? g.noteEn : g.note) : c.note,
       color: FAM[c.family].color,
-      family: FAM[c.family].cn,
+      family: nov && INGF[c.family] ? (isEn() ? INGF[c.family].en : INGF[c.family].cn) : FAM[c.family].cn,
     };
   }
 
-  function labSnapshot(focusId) {
+  function labSnapshot(focusId, mode) {
     const sel = state.sel.filter((id) => CM[id]);
     let focus = focusId && CM[focusId] ? CM[focusId] : null;
     if (!focus && sel.length) focus = CM[sel[0]];
     const score = focus ? tasteScore(focus) : null;
     const ex = focus ? tasteEx(score) : 2;
-    const lab = focus ? labLabel(focus.id) : null;
+    const lab = focus ? labLabel(focus.id, mode) : null;
     return {
       focusId: focus ? focus.id : null,
       name: lab ? lab.main : "",
@@ -1588,10 +1588,10 @@
       count: sel.length,
       ids: sel.slice(),
       names: sel.map((id) => {
-        const l = labLabel(id);
+        const l = labLabel(id, mode);
         return { id: id, name: l.main, emoji: l.emoji };
       }),
-      mode: state.mode,
+      mode: mode || state.mode,
       style: isEn() ? SM[state.styleId].en : SM[state.styleId].cn,
     };
   }

@@ -101,6 +101,7 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: #9fded6;
+  white-space: nowrap;
 }
 .l3d-brand .dot {
   width: 6px;
@@ -114,41 +115,38 @@
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.45; transform: scale(0.75); }
 }
-.l3d-brand i {
-  font-style: normal;
-  color: #6f8f8c;
-  letter-spacing: 0.1em;
-}
 .l3d-top-actions {
   display: flex;
   align-items: center;
   gap: 8px;
   pointer-events: auto;
 }
-.l3d-modes {
+/* 状态标签，不是按钮：只用一个小圆点开场 */
+.l3d-scope {
   display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid rgba(95, 227, 208, 0.25);
-  border-radius: 100px;
-  background: rgba(6, 14, 16, 0.6);
-  backdrop-filter: blur(6px);
+  align-items: center;
+  gap: 7px;
+  padding-right: 8px;
+  pointer-events: none;
+  white-space: nowrap;
 }
-.l3d-modes button {
-  min-height: 24px;
-  padding: 0 11px;
-  border-radius: 100px;
-  font-size: 10.5px;
-  letter-spacing: 0.04em;
-  color: #7fa5a2;
-  transition: color 0.2s ease, background-color 0.2s ease;
+.l3d-scope b {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: #9fded6;
 }
-.l3d-modes button[aria-pressed="true"] {
-  color: #0a1416;
-  background: #5fe3d0;
+.l3d-scope::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #e9a94e;
+  box-shadow: 0 0 8px rgba(233, 169, 78, 0.8);
 }
 .l3d-exit {
   min-height: 32px;
+  white-space: nowrap;
   padding: 0 14px;
   border: 1px solid rgba(95, 227, 208, 0.3);
   border-radius: 100px;
@@ -484,9 +482,9 @@
 body.l3d-lock { overflow: hidden; }
 
 @media (max-width: 900px) {
+  .l3d-brand { display: none; }
   .l3d-left { display: none; }
   .l3d-right { display: none; }
-  .l3d-brand i { display: none; }
   .l3d-top { padding: 12px 14px; }
   .l3d-bottom { bottom: 14px; font-size: 8.5px; gap: 8px; }
   .l3d-bottom .l3d-bar { width: 52px; }
@@ -497,7 +495,7 @@ body.l3d-lock { overflow: hidden; }
   .l3d-ring, .l3d-brand .dot { animation: none; }
 }
 
-/* 悬停标签：跟着指针走，替代每个罐子上的常驻牌子 */
+/* 悬停标签：跟着指针走，替代每件原料上的常驻大牌 */
 .l3d-tip {
   position: absolute;
   z-index: 5;
