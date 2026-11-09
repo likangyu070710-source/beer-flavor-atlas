@@ -35,6 +35,7 @@
   var BASE = { theta: 0.13, phi: 1.28, radius: 6.9, tx: 0 };
   var TARGET = new THREE.Vector3(0, 1.14, 0);
   var NARROW = false;
+  var padRight = 12; /* 右侧读数面板占掉的宽度，气泡别钻到它下面 */
 
   var els = {}, scene, camera, renderer, ray, ndc, jars = [], pick = [], plates = [], bottle, liquid, surface;
   var char, head, armR, mouthSet = {}, eyeSet = {}, browSet = {}, glassInHand;
@@ -81,6 +82,11 @@
     root.setAttribute("aria-hidden", "true");
     root.innerHTML =
       '<canvas id="l3dCanvas"></canvas>' +
+      '<div class="l3d-say" id="l3dSay" aria-hidden="true">' +
+        '<div class="l3d-say-in">' +
+          '<p class="l3d-say-l"></p><p class="l3d-say-l"></p>' +
+        "</div>" +
+      "</div>" +
       '<div class="l3d-scan"></div>' +
       '<div class="l3d-tip" id="l3dTip"></div>' +
       '<header class="l3d-top">' +
@@ -139,6 +145,8 @@
       err: $("#l3dError", root),
       errMsg: $("#l3dErrorMsg", root),
       tip: $("#l3dTip", root),
+      say: $("#l3dSay", root),
+      sayLines: root.querySelectorAll(".l3d-say-l"),
     };
 
     root.addEventListener("click", function (e) {
@@ -153,6 +161,12 @@
       }
     });
 
+    document.addEventListener("atlas:lang", measureSay);
+    /* 译文比原文长，气泡会变宽；宽度变一次就重量一次，别让它顶到右侧面板 */
+    if (global.ResizeObserver) {
+      sayRO = new ResizeObserver(function () { measureSay(); });
+      sayRO.observe(els.say);
+    }
     els.canvas.addEventListener("pointerdown", onDown);
     els.canvas.addEventListener("pointermove", onMove);
     els.canvas.addEventListener("pointerup", onUp);
@@ -1876,6 +1890,7 @@
     state.phase = "loading";
     state.t0 = performance.now();
     state.focus = null;
+    hideSay();
     els.loading.classList.remove("is-done");
     els.root.classList.add("is-open");
     els.root.setAttribute("aria-hidden", "false");
@@ -1910,6 +1925,7 @@
     }
     document.body.classList.remove("l3d-lock");
     if (els.tip) els.tip.classList.remove("is-on");
+    hideSay();
     if (A && A.sync) A.sync();
   }
 
@@ -1973,6 +1989,7 @@
 
     updateCamera();
     updateCharacter(dt, now);
+    placeSay();
     updateBottle(dt);
     updateJars();
     updateOrbs(now);
@@ -2042,6 +2059,77 @@
         head.rotation.x = -0.16 * kk;
       }
     }
+  }
+
+  /* ---------------- 台词 ----------------
+     尝一口说两句：第一句是当下反应，第二句是酿酒师的自言自语。
+     按五档愉悦度各写一套，气泡跟着脑袋走，转视角也不会掉队。 */
+  var LINES = [
+    ["咳……这也太冲了。", "先记下来，下次别这么放。"],
+    ["嗯……有点跑偏。", "比例得改，苦味压过了头。"],
+    ["还行，中规中矩。", "再添一味，层次就出来了。"],
+    ["不错，香气立起来了。", "这个配比，可以记进配方本。"],
+    ["好酒！这一口很完整。", "就照这个方子，再酿一桶。"],
+  ];
+
+  var sayPos = new THREE.Vector3();
+  var sayBox = { w: 0, h: 0 };
+  var sayTimers = [];
+  var sayRO = null;
+
+  function clearSayTimers() {
+    for (var i = 0; i < sayTimers.length; i++) global.clearTimeout(sayTimers[i]);
+    sayTimers = [];
+  }
+
+  function hideSay() {
+    clearSayTimers();
+    if (els.say) els.say.classList.remove("is-on", "is-two");
+  }
+
+  /* 投放落定后约 1 秒才开口：先抬手、入口，再说话 */
+  function queueSay(ex) {
+    if (!els.say) return;
+    hideSay();
+    var pair = LINES[clamp(ex | 0, 0, 4)];
+    sayTimers.push(global.setTimeout(function () {
+      if (!state.opened) return;
+      els.sayLines[0].textContent = pair[0];
+      els.sayLines[1].textContent = pair[1];
+      els.say.classList.add("is-on");
+      measureSay();
+    }, REDUCE ? 120 : 960));
+    if (!REDUCE) {
+      sayTimers.push(global.setTimeout(function () {
+        if (state.opened) els.say.classList.add("is-two");
+      }, 960 + 1250));
+    } else if (els.say) {
+      els.say.classList.add("is-two");
+    }
+    sayTimers.push(global.setTimeout(hideSay, REDUCE ? 5000 : 6100));
+  }
+
+  function measureSay() {
+    if (!els.say || !els.say.classList.contains("is-on")) return;
+    sayBox.w = els.say.offsetWidth;
+    sayBox.h = els.say.offsetHeight;
+    placeSay();
+  }
+
+  /* 每帧把脑袋的世界坐标投到屏幕，气泡贴在上面，尾巴对准脑袋 */
+  function placeSay() {
+    if (!els.say || !sayBox.w || !head || !els.say.classList.contains("is-on")) return;
+    var r = els.canvas.getBoundingClientRect();
+    head.getWorldPosition(sayPos);
+    /* 头顶再高一点就飘了：只留出发梢的余量 */
+    sayPos.y += 0.34;
+    var v = sayPos.project(camera);
+    var hx = (v.x * 0.5 + 0.5) * r.width;
+    var hy = (-v.y * 0.5 + 0.5) * r.height;
+    var left = clamp(hx - sayBox.w * 0.55, 12, r.width - padRight - sayBox.w);
+    var top = Math.max(14, hy - sayBox.h - 8);
+    els.say.style.transform = "translate3d(" + Math.round(left) + "px," + Math.round(top) + "px,0)";
+    els.say.style.setProperty("--tail", Math.round(clamp(hx - left, 24, sayBox.w - 24)) + "px");
   }
 
   function updateBottle(dt) {
@@ -2217,6 +2305,9 @@
     if (char) char.position.x = NARROW ? 1.72 : 2.0;
     /* 手机屏太窄，架沿名字会糊成一片，只留模型 */
     plates.forEach(function (p) { p.visible = !NARROW; });
+    var panel = els.root && els.root.querySelector(".l3d-right");
+    padRight = panel && panel.offsetWidth ? panel.offsetWidth + 38 : 12;
+    measureSay();
     if (state.phase === "live") cam.tRadius = BASE.radius;
   }
 
@@ -2276,6 +2367,7 @@
     var info = L(id);
     state.reactEx = S(id).ex;
     state.reactAt = performance.now() + 260;
+    queueSay(state.reactEx);
     if (was) {
       /* 已在瓶中：给瓶身一个脉冲即可 */
       flash = 0.4;
