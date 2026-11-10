@@ -926,14 +926,17 @@
     { a: "wild", b: "malt" },
   ];
 
+  /* 六条族对话各自绑在槽位上；集齐那一下不看槽位、按「第 6 枚」统一说， */
+  /* 否则槽 5（野菌×麦芽）先亮时会提前说「六枚都在了」。                     */
   var CAP_SAY = [
     ["果香酒花，酵母碰酒花。", "垫台记下了。"],
     ["香蕉面包，酵母吃过麦芽。", "垫台记下了。"],
     ["香料花园，酒花遇见酚。", "垫台记下了。"],
     ["酚类点了火，麦芽焦了。", "垫台记下了。"],
     ["野菌接手，酵母退了。", "垫台记下了。"],
-    ["六枚都在了。", "往后这屋子有你一份。"],
+    ["麦芽酸了，野菌在里头。", "垫台记下了。"],
   ];
+  var CAP_SEALED_SAY = ["六枚都在了。", "往后这屋子有你一份。"];
 
   /* 弧位：-52° … +52°，步长 20.8°，半径 0.78。弧长 0.283，盖径 0.175，不会叠。 */
   var CAP_R = 0.78;
@@ -962,18 +965,19 @@
     capReady = true;
   }
 
-  /* 双色：盖面用第一个族、冠圈用第二个族 —— 六枚连起来才构成一张族对表。
-     都往铜色里兑一点，压得住头顶吊灯的直射，不会在浅木垫台上糊成白点。
-     麦芽作冠圈时压到 #96593A：酵母金和麦芽铜只差 12° 色相，2px 冠圈会糊成一块。 */
-  function capColors(pair) {
+  /* 族色往铜色里兑、再压暗一档：头顶吊灯直射 + ACES 会把原色压成一片近白，
+     不压暗六枚盖就只是六个白点。 */
+  function capTint(fam) {
     readCapFamilies();
-    var face = cssColor(capFamColor[pair.a] || "#b5813a")
-      .lerp(cssColor(0xb5813a), 0.3).multiplyScalar(0.5);
-    var band = pair.b === "malt"
-      ? cssColor(0x96593a)
-      : cssColor(capFamColor[pair.b] || "#8d5a33").lerp(cssColor(0xb5813a), 0.2);
-    band.multiplyScalar(0.56);
-    return { face: face, band: band };
+    return cssColor(capFamColor[fam] || "#b5813a")
+      .lerp(cssColor(0x8d5a33), 0.34).multiplyScalar(0.4);
+  }
+
+  /* 双色：盖面用第一个族、冠圈用第二个族 —— 六枚连起来才构成一张族对表。
+     麦芽作冠圈时压到 #96593A：酵母金与麦芽铜只差 12° 色相，那一圈会糊成一块。 */
+  function capColors(pair) {
+    var band = pair.b === "malt" ? cssColor(0x96593a) : capTint(pair.b);
+    return { face: capTint(pair.a), band: band };
   }
 
   function setCapOpacity(g, v) {
@@ -1018,15 +1022,17 @@
       face.position.y = 0.004;
       g.add(face);
       /* 冠圈压到盖面下缘并外扩一点，俯视才看得见那圈深色压边 */
-      var band = new THREE.Mesh(new THREE.TorusGeometry(0.089, 0.0075, 6, 18), bandMat);
+      var band = new THREE.Mesh(new THREE.TorusGeometry(0.0875, 0.007, 6, 18), bandMat);
       band.rotation.x = Math.PI / 2;
       band.position.y = -0.004;
       g.add(band);
 
-      /* 统一朝瓶心倾 12°（绕切向轴）：六枚高光落在同一侧，整排读成一条弧 */
+      /* 统一朝瓶心倾 12°（YXZ 欧拉：先绕 Y 转到槽位，再压 12°）：
+         六枚高光落在同一侧，整排读成一条弧；随机 rotation.z 在 27px 上读作“歪了” */
       var a = capAngle(idx);
-      g.quaternion.setFromAxisAngle(new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)), CAP_TILT);
-      g.userData.quat = g.quaternion.clone();
+      g.rotation.order = "YXZ";
+      g.rotation.set(-CAP_TILT, a, 0);
+      g.userData.slotY = a;
       g.position.copy(capSlot(idx));
       g.visible = false;
       bottle.add(g);
@@ -1079,7 +1085,7 @@
     if (REDUCE) {
       /* 不飞：直接落位，120ms 淡入 */
       g.position.copy(capSlot(i));
-      g.quaternion.copy(g.userData.quat);
+      g.rotation.set(-CAP_TILT, g.userData.slotY, 0);
       g.visible = true;
       setCapOpacity(g, 0);
       state.capFlight.push({ mesh: g, kind: "fade", t0: now, dur: 120 });
@@ -1140,10 +1146,10 @@
       var e = ease(k);
       f.mesh.position.lerpVectors(f.from, f.to, e);
       f.mesh.position.y += Math.sin(Math.PI * e) * 0.55;
-      f.mesh.rotation.x = e * 6;
+      f.mesh.rotation.set(-CAP_TILT, f.mesh.userData.slotY + e * 6, 0);
       if (k >= 1) {
         f.mesh.position.copy(f.to);
-        f.mesh.quaternion.copy(f.mesh.userData.quat);   /* 落回「朝瓶心 12°」的姿势 */
+        f.mesh.rotation.set(-CAP_TILT, f.mesh.userData.slotY, 0);   /* 落回「朝瓶心 12°」 */
         state.capFlight.splice(i, 1);
         state.capFlight.push({ mesh: f.mesh, kind: "bounce", t0: now, dur: 160 });
         capPulse(f.to, now);
@@ -1468,12 +1474,14 @@
     function mouthMesh(kind) {
       var m;
       if (kind === "frown") {
+        /* TorusGeometry(…, Math.PI) 画的是上半环 ∩：嘴角向下才是皱眉，
+           原先加了 rotation.z=π 反而成了 ∪（笑脸）—— 弧向反了。 */
         m = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.011, 8, 20, Math.PI), ink);
-        m.rotation.z = Math.PI;
       } else if (kind === "flat") {
         m = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.011, 0.011), ink);
       } else if (kind === "smile") {
         m = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.011, 8, 20, Math.PI), ink);
+        m.rotation.z = Math.PI;   /* 转成 ∪，嘴角向上 */
       } else {
         m = new THREE.Group();
         var o = new THREE.Mesh(new THREE.SphereGeometry(0.05, 20, 14), new THREE.MeshStandardMaterial({ color: 0x3a1d18, roughness: 0.7 }));
@@ -1488,6 +1496,8 @@
         m.add(teeth);
       }
       m.position.set(0, -0.098, 0.226);
+      /* frown 是 ∩，顶点会顶到鼻底，整体下移，让整条弧都在鼻底以下 */
+      if (kind === "frown") m.position.y = -0.118;
       m.visible = false;
       head.add(m);
       return m;
@@ -3033,9 +3043,10 @@
     state.reactEx = S(id).ex;
     state.reactAt = performance.now() + 260;
     kickSwirl();
-    /* 先看这一投有没有凑齐族配对：瓶盖台词优先级最高，抢在试饮反应前面说 */
+    /* 先看这一投有没有凑齐族配对：瓶盖台词优先级最高，抢在试饮反应前面说；
+       真解锁了就整个跳过投料台词，避免 900ms 后被瓶盖台词打断、气泡闪一下 */
     var got = checkCaps();
-    if (got >= 0) sayPair(CAP_SAY[got], 960, 2);
+    if (got >= 0) sayPair(state.capsSealed ? CAP_SEALED_SAY : CAP_SAY[got], 960, 2);
     else queueSay(state.reactEx);
     if (was) {
       /* 已在瓶中：给瓶身一个脉冲即可 */
@@ -3193,9 +3204,11 @@
       charStage: state.charStage,
       sayOn: !!(els.say && els.say.classList.contains("is-on")),
       spin: +state.spin.toFixed(2),
+      spinVel: +state.spin.toFixed(2),
       foamVisible: !!(foamLip && foamLip.visible),
       /* 第一盏灯的 pivot 摆角，供自动化对比（0 表示静止） */
-      pendantAng: pendants.length ? +((pendants[0].userData.ang || 0).toFixed(3)) : 0,
+      pendantAng: (pendants.length && pendants[0].userData.pivot)
+        ? +(pendants[0].userData.pivot.rotation.z.toFixed(3)) : 0,
       /* 当前气泡说的是哪一行，便于断言「该说集齐时没说专属」 */
       sayPairName: (els.say && els.say.classList.contains("is-on") && els.sayLines)
         ? els.sayLines[0].textContent : "",
