@@ -66,6 +66,13 @@
 .l3d.is-dragging canvas { cursor: grabbing; }
 .l3d.is-over-bottle canvas { cursor: copy; }
 
+/* canvas 是满屏的，outline 只能往内画，否则跑到视口外被 overflow 裁掉 */
+#l3dCanvas:focus { outline: none; }
+#l3dCanvas:focus-visible {
+  outline: 2px solid #e9a94e;
+  outline-offset: -3px;
+}
+
 /* 扫描线与暗角，给画面一点“仪器”质感 */
 .l3d-scan {
   position: absolute;

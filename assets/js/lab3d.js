@@ -29,6 +29,21 @@
     reactAt: -1,
     reactEx: 2,
     lastToggle: 0,
+    /* 点小人：press 是按下未抬手的候选，poke 正在播的动作 */
+    press: null,
+    poke: null,
+    charStage: 0,
+    lastPoke: 0,
+    foamDone: false,
+    /* 瓶盖收藏：只放内存，不落盘，也不在开屏时回扫 */
+    caps: [],
+    capsSealed: false,
+    capFlight: [],
+    capFx: [],
+    sealGlowAt: 0,
+    /* 瓶内漩涡 */
+    spin: 0,
+    swirlPulse: 0,
   };
 
   var cam = { theta: 0.42, phi: 1.34, radius: 12.4, tRadius: 12.4, vT: 0, vP: 0 };
@@ -42,6 +57,9 @@
   var glowRing, mouthWorld = new THREE.Vector3();
   var orbs = [], drops = [], flash = 0;
   var clock = 0, lastT = 0;
+  /* 彩蛋用的小物件：可点的人物部件、上唇泡沫、瓶内漩涡、六枚瓶盖 */
+  var charPick = [], foamLip = null, swirl = null;
+  var capSockets = null, capMeshes = [];
 
   /* ---------------- 小工具 ---------------- */
   function $(s, r) { return (r || document).querySelector(s); }
@@ -81,8 +99,8 @@
     root.setAttribute("aria-label", "3D 发酵舱");
     root.setAttribute("aria-hidden", "true");
     root.innerHTML =
-      '<canvas id="l3dCanvas"></canvas>' +
-      '<div class="l3d-say" id="l3dSay" aria-hidden="true">' +
+      '<canvas id="l3dCanvas" tabindex="0" aria-label="按 Enter 与酿酒师说话，Esc 退出"></canvas>' +
+      '<div class="l3d-say" id="l3dSay" role="status" aria-live="polite" aria-atomic="true">' +
         '<div class="l3d-say-in">' +
           '<p class="l3d-say-l"></p><p class="l3d-say-l"></p>' +
         "</div>" +
@@ -161,7 +179,7 @@
       }
     });
 
-    document.addEventListener("atlas:lang", measureSay);
+    document.addEventListener("atlas:lang", onLangChange);
     /* 译文比原文长，气泡会变宽；宽度变一次就重量一次，别让它顶到右侧面板 */
     if (global.ResizeObserver) {
       sayRO = new ResizeObserver(function () { measureSay(); });
@@ -172,8 +190,10 @@
     els.canvas.addEventListener("pointerup", onUp);
     els.canvas.addEventListener("pointercancel", onUp);
     els.canvas.addEventListener("pointerleave", function () {
+      if (state.press) { state.press = null; els.canvas.style.cursor = ""; }
       if (!state.dragging && !state.orbit) setOver(false);
     });
+    els.canvas.addEventListener("keydown", onCanvasKey);
     els.canvas.addEventListener("wheel", onWheel, { passive: false });
     global.addEventListener("resize", onResize);
     document.addEventListener("keydown", function (e) {
@@ -375,49 +395,88 @@
     var g = new THREE.Group();
     g.position.set(x, y, z);
 
+    /* 吊点在天花板：整盏灯挂在一个 pivot 上，摆起来才是真的绕挂点转。
+       PointLight 留在 g 里不跟着摆 —— 否则全场材质的受光每帧都在抖。 */
+    var hang = 7.4 - y;
+    var pivot = new THREE.Group();
+    pivot.position.y = hang;
+    g.add(pivot);
+
     var cord = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.007, 0.007, 7.4 - y, 6),
+      new THREE.CylinderGeometry(0.007, 0.007, hang, 6),
       mat(0x1a1310, { r: 0.9 })
     );
-    cord.position.y = (7.4 - y) / 2;
-    g.add(cord);
+    cord.position.y = -hang / 2;
+    pivot.add(cord);
 
     var cap = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.058, 0.05, 12), mat(0x2a221c, { r: 0.5, m: 0.5 }));
-    cap.position.y = 0.22;
-    g.add(cap);
+    cap.position.y = 0.22 - hang;
+    pivot.add(cap);
 
     var shade = new THREE.Mesh(
       new THREE.ConeGeometry(0.27, 0.26, 30, 1, true),
       mat(0x3a2f26, { r: 0.45, m: 0.5, back: true })
     );
-    shade.position.y = 0.08;
-    g.add(shade);
+    shade.position.y = 0.08 - hang;
+    pivot.add(shade);
 
     var inner = new THREE.Mesh(
       new THREE.ConeGeometry(0.255, 0.24, 30, 1, true),
       mat(0xffcf94, { r: 0.6, e: 0.6, back: true })
     );
-    inner.position.y = 0.075;
-    g.add(inner);
+    inner.position.y = 0.075 - hang;
+    pivot.add(inner);
 
     var bulb = new THREE.Mesh(new THREE.SphereGeometry(0.062, 16, 12), new THREE.MeshBasicMaterial({ color: 0xffe0b4 }));
-    bulb.position.y = -0.04;
-    g.add(bulb);
+    bulb.position.y = -0.04 - hang;
+    pivot.add(bulb);
 
     var glow = new THREE.Sprite(new THREE.SpriteMaterial({
       map: TEX.glowWarm, transparent: true, depthWrite: false,
       blending: THREE.AdditiveBlending, opacity: 0.5,
     }));
     glow.scale.set(1.7, 1.7, 1);
-    glow.position.y = -0.04;
-    g.add(glow);
+    glow.position.y = -0.04 - hang;
+    pivot.add(glow);
 
     var lamp = new THREE.PointLight(0xffb877, 0.9 * power, 11, 2);
     lamp.position.y = -0.1;
     g.add(lamp);
 
+    g.userData.pivot = pivot;
+    g.userData.glow = glow;
+    g.userData.ang = 0;
+    g.userData.vel = 0;
+
     scene.add(g);
     return g;
+  }
+
+  /* 吊灯惯性：镜头一转，灯跟着“甩”一下再荡回来。
+     没加任何 mesh，只让 pivot 绕 z 轴转，g 与 pendants[] 都不动。 */
+  function updatePendants(dt) {
+    if (!pendants.length) return;
+    var t0 = clamp(cam.vT * 6, -0.1, 0.1);
+    var t1 = clamp(cam.vP * 6, -0.1, 0.1) * -0.7;
+    for (var i = 0; i < pendants.length; i++) {
+      var p = pendants[i];
+      var piv = p.userData.pivot, glow = p.userData.glow;
+      if (!piv) continue;
+      if (REDUCE) {
+        piv.rotation.z = 0;
+        p.userData.ang = 0;
+        p.userData.vel = 0;
+        if (glow) glow.material.opacity = 0.5;
+        continue;
+      }
+      var target = i ? t1 : t0;
+      /* 阻尼弹簧：往目标角追，越过再荡回来 */
+      p.userData.vel += (-(p.userData.ang - target) * 9 - p.userData.vel * 1.1) * dt;
+      p.userData.ang += p.userData.vel * dt;
+      p.userData.ang = clamp(p.userData.ang, -0.19, 0.19);
+      piv.rotation.z = p.userData.ang;
+      if (glow) glow.material.opacity = 0.5 + Math.abs(p.userData.ang) * 0.6;
+    }
   }
 
   /* 接地阴影：不开 shadowMap，用一张软圆片把物体“按”在地上 */
@@ -771,6 +830,21 @@
     surface.position.y = 0.26 + 0.16;
     bottle.add(surface);
 
+    /* 瓶内漩涡：液面是一张纯色圆片，只转材质看不出变化，
+       所以再压一张画出来的旋纹 —— 投料后转几圈自己停下，静止时 0 draw call。 */
+    swirl = new THREE.Mesh(
+      new THREE.CircleGeometry(0.295, 32),
+      new THREE.MeshBasicMaterial({
+        map: swirlTexture(), transparent: true, opacity: 0,
+        depthWrite: false, blending: THREE.AdditiveBlending,
+      })
+    );
+    swirl.rotation.x = -Math.PI / 2;
+    swirl.position.y = 0.26 + 0.16 + 0.002;
+    swirl.visible = false;
+    swirl.renderOrder = 2;
+    bottle.add(swirl);
+
     /* 软木塞与封口，瓶口才不是一根空心管子 */
     var cork = new THREE.Mesh(new THREE.CylinderGeometry(0.128, 0.132, 0.12, 20), mat(0xb98a55, { r: 0.92 }));
     cork.position.y = 0.2 + 1.47;
@@ -813,8 +887,235 @@
     bottle.add(mouthRing);
     bottle.userData.mouthRing = mouthRing;
 
+    buildCaps();
+
     scene.add(bottle);
     mouthWorld.set(-1.25, 0.2 + 1.52, 0.9);
+  }
+
+  /* ---------------- 六枚瓶盖 ----------------
+     按风味族配对，不认具体化合物：只要瓶里同时出现过某两族，就掉一枚盖子。
+     空凹位是常驻的可发现性暗示（1 个 InstancedMesh），盖子本身解锁前不占 draw call。 */
+  var CAP_PAIRS = [
+    { a: "yeast", b: "hop" },
+    { a: "yeast", b: "malt" },
+    { a: "hop", b: "phenol" },
+    { a: "malt", b: "phenol" },
+    { a: "wild", b: "yeast" },
+    { a: "wild", b: "malt" },
+  ];
+
+  var CAP_SAY = [
+    ["果香酒花，酵母碰酒花。", "垫台记下了。"],
+    ["香蕉面包，酵母吃过麦芽。", "垫台记下了。"],
+    ["香料花园，酒花遇见酚。", "垫台记下了。"],
+    ["烟熏焦糖，麦芽带上了火。", "垫台记下了。"],
+    ["野菌发酵，菌群自己作主。", "垫台记下了。"],
+    ["六枚都在，垫台记下了。", "往后这屋子有你一份。"],
+  ];
+
+  var capFam = {}, capFamColor = {}, capReady = false;
+
+  function readCapFamilies() {
+    if (capReady || !A) return;
+    var meta = A.meta();
+    (meta.compounds || []).forEach(function (c) {
+      capFam[c.id] = c.family;
+      if (!capFamColor[c.family]) {
+        var lb = A.label(c.id);
+        if (lb && lb.color) capFamColor[c.family] = lb.color;
+      }
+    });
+    capReady = true;
+  }
+
+  /* 族色往铜色里兑一点、再压暗一档：六枚盖子仍是一套手作调子，
+     也压得住头顶吊灯的直射，不会在浅木垫台上糊成六个白点 */
+  function capColor(pair) {
+    readCapFamilies();
+    var col = cssColor(capFamColor[pair.a] || "#b5813a");
+    return col.lerp(cssColor(0x8d5a33), 0.34).multiplyScalar(0.4);
+  }
+
+  /* 凹位坐标：垫台顶面 y=0.207，半径 0.72，-75° 起每 30° 一个 */
+  function capSlot(i) {
+    var a = (-75 + 30 * i) * Math.PI / 180;
+    return new THREE.Vector3(Math.sin(a) * 0.72, 0.207, Math.cos(a) * 0.72);
+  }
+
+  function setCapOpacity(g, v) {
+    g.traverse(function (o) { if (o.isMesh && o.material) o.material.opacity = v; });
+  }
+
+  function buildCaps() {
+    var geo = new THREE.TorusGeometry(0.052, 0.0045, 6, 18);
+    geo.rotateX(-Math.PI / 2);   /* 先把环放平，实例矩阵就只剩平移 */
+    capSockets = new THREE.InstancedMesh(
+      geo,
+      new THREE.MeshBasicMaterial({ color: 0x8a6a44, transparent: true, opacity: 0.55 }),
+      CAP_PAIRS.length
+    );
+    var m4 = new THREE.Matrix4();
+    for (var i = 0; i < CAP_PAIRS.length; i++) {
+      var p = capSlot(i);
+      m4.makeTranslation(p.x, p.y, p.z);
+      capSockets.setMatrixAt(i, m4);
+    }
+    capSockets.instanceMatrix.needsUpdate = true;
+    capSockets.frustumCulled = false;
+    bottle.add(capSockets);
+
+    capMeshes = CAP_PAIRS.map(function (pair, idx) {
+      var g = new THREE.Group();
+      /* 顶部就是吊灯，金属度一高就只剩一片高光；宁可粗一点，让族色看得清 */
+      var mt = new THREE.MeshStandardMaterial({
+        color: capColor(pair), roughness: 0.78, metalness: 0.12,
+        transparent: true, opacity: 1,
+      });
+      var face = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.008, 12), mt);
+      g.add(face);
+      var teeth = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.004, 5, 14), mt);
+      teeth.rotation.x = Math.PI / 2;
+      g.add(teeth);
+      g.position.copy(capSlot(idx));
+      g.rotation.z = (idx % 2 ? 1 : -1) * (0.1 + 0.05 * (idx % 3));
+      g.visible = false;
+      bottle.add(g);
+      return g;
+    });
+  }
+
+  function mouthLocal() {
+    return mouthWorld.clone().sub(bottle.position);
+  }
+
+  /* 瓶口一捧光：复用吊灯那张暖光贴图，900ms 散掉，用完删 */
+  function mouthFlash(now) {
+    var sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: TEX.glowWarm, transparent: true, depthWrite: false,
+      blending: THREE.AdditiveBlending, opacity: REDUCE ? 0.6 : 0.85,
+    }));
+    sp.position.copy(mouthWorld);
+    sp.scale.setScalar(REDUCE ? 0.9 : 0.35);
+    scene.add(sp);
+    state.capFx.push({ obj: sp, kind: "flash", t0: now, dur: REDUCE ? 400 : 900 });
+  }
+
+  /* 凹位上一圈脉冲：用完立刻 remove，不留常驻开销 */
+  function capPulse(at, now) {
+    initGeo();
+    var ring = new THREE.Mesh(
+      GEO.capPulse,
+      new THREE.MeshBasicMaterial({ color: 0xf6cd85, transparent: true, opacity: 0.7, depthWrite: false })
+    );
+    ring.position.copy(at);
+    ring.rotation.x = -Math.PI / 2;
+    ring.scale.setScalar(0.05);
+    bottle.add(ring);
+    state.capFx.push({ obj: ring, kind: "ring", t0: now, dur: 500 });
+  }
+
+  function unlockCap(i, now) {
+    if (state.caps.indexOf(i) >= 0) return false;
+    state.caps.push(i);
+    var g = capMeshes[i];
+    if (!g) return true;
+    var slot = capSlot(i);
+    if (REDUCE) {
+      /* 不飞：直接落位，120ms 淡入 */
+      g.position.copy(slot);
+      g.rotation.z = (i % 2 ? 1 : -1) * (0.1 + 0.05 * (i % 3));
+      g.visible = true;
+      setCapOpacity(g, 0);
+      state.capFlight.push({ mesh: g, kind: "fade", t0: now, dur: 120 });
+    } else {
+      g.position.copy(mouthLocal());
+      g.scale.setScalar(1);
+      g.visible = true;
+      state.capFlight.push({
+        mesh: g, kind: "fly", t0: now, dur: 620,
+        from: mouthLocal(), to: slot.clone(),
+      });
+    }
+    mouthFlash(now);
+    return true;
+  }
+
+  /* 返回本次要说的那一枚（没有解锁返回 -1）：
+     同一次投料可能同时凑齐两组，取序号最大的一枚，集齐时自然是第 6 枚。 */
+  function checkCaps() {
+    if (!capSockets) return -1;
+    readCapFamilies();
+    var have = {};
+    S(null).ids.forEach(function (id) {
+      var f = capFam[id];
+      if (f) have[f] = 1;
+    });
+    var got = -1;
+    for (var i = 0; i < CAP_PAIRS.length; i++) {
+      if (state.caps.indexOf(i) >= 0) continue;
+      if (have[CAP_PAIRS[i].a] && have[CAP_PAIRS[i].b]) {
+        unlockCap(i, performance.now());
+        got = i;
+      }
+    }
+    if (state.caps.length >= CAP_PAIRS.length && !state.capsSealed) {
+      state.capsSealed = true;
+      state.sealGlowAt = performance.now();
+    }
+    return got;
+  }
+
+  function updateCaps(now) {
+    for (var i = state.capFlight.length - 1; i >= 0; i--) {
+      var f = state.capFlight[i];
+      var k = clamp((now - f.t0) / f.dur, 0, 1);
+      if (f.kind === "fade") {
+        setCapOpacity(f.mesh, k);
+        if (k >= 1) { setCapOpacity(f.mesh, 1); state.capFlight.splice(i, 1); }
+        continue;
+      }
+      if (f.kind === "bounce") {
+        var b = 1 - ease(k);
+        f.mesh.scale.set(1 + 0.15 * b, 1 - 0.2 * b, 1 + 0.15 * b);
+        if (k >= 1) { f.mesh.scale.setScalar(1); state.capFlight.splice(i, 1); }
+        continue;
+      }
+      /* fly：水平直线 + 竖直抛物线，顺手转 6 rad */
+      var e = ease(k);
+      f.mesh.position.lerpVectors(f.from, f.to, e);
+      f.mesh.position.y += Math.sin(Math.PI * e) * 0.55;
+      f.mesh.rotation.x = e * 6;
+      if (k >= 1) {
+        f.mesh.position.copy(f.to);
+        f.mesh.rotation.x = 0;
+        state.capFlight.splice(i, 1);
+        state.capFlight.push({ mesh: f.mesh, kind: "bounce", t0: now, dur: 160 });
+        capPulse(f.to, now);
+      }
+    }
+
+    for (var j = state.capFx.length - 1; j >= 0; j--) {
+      var x = state.capFx[j];
+      var t = clamp((now - x.t0) / x.dur, 0, 1);
+      if (x.kind === "flash") {
+        x.obj.material.opacity = (REDUCE ? 0.6 : 0.85) * (1 - t);
+        if (!REDUCE) x.obj.scale.setScalar(0.35 + 1.15 * ease(t));
+        if (t >= 1) {
+          scene.remove(x.obj);
+          x.obj.material.dispose();
+          state.capFx.splice(j, 1);
+        }
+      } else {
+        x.obj.material.opacity = 0.7 * (1 - t);
+        if (!REDUCE) x.obj.scale.setScalar(0.05 + 0.1 * ease(t));
+        if (t >= 1) {
+          bottle.remove(x.obj);
+          x.obj.material.dispose();
+          state.capFx.splice(j, 1);
+        }
+      }
+    }
   }
 
   /* ================= 人物 ================= */
@@ -948,6 +1249,9 @@
     armR.rotation.x = -0.5;
     armR.rotation.z = -0.1;
     char.userData.armL = char.children[char.children.length - 2];
+    /* 记住手臂的静止角度：点击动作全部相对它做插值，回位才不会跑偏 */
+    char.userData.armL.userData.baseZ = char.userData.armL.rotation.z;
+    char.userData.armRBaseX = armR.rotation.x;
 
     /* 手里的酒杯 */
     glassInHand = new THREE.Group();
@@ -1142,8 +1446,24 @@
     nose.position.set(0, -0.032, 0.238);
     head.add(nose);
 
+    /* 上唇那点泡沫：彩蛋第 4 档才露面，平时不参与渲染 */
+    foamLip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.028, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0xf7efdd, roughness: 0.95 })
+    );
+    foamLip.scale.set(1, 0.5, 0.6);
+    foamLip.position.set(0, -0.075, 0.238);
+    foamLip.visible = false;
+    head.add(foamLip);
+
     char.userData.head = head;
     char.userData.arm = armR;
+    /* 只有躯干与脑袋可以被点中：手臂、腿、酒杯都不入列，
+       否则点哪儿都算“点到人了”，反而容易误触。 */
+    [skull, torso, chest, hips].forEach(function (m) {
+      m.userData.char = char;
+      charPick.push(m);
+    });
     char.add(makeBlobShadow(0.32, 0.42));
     scene.add(char);
   }
@@ -1170,6 +1490,8 @@
       arc: new THREE.TorusGeometry(1, 0.3, 8, 18, 2.2),
       wedge: new THREE.CylinderGeometry(1, 1, 1, 14, 1, false, 0, 1.05),
       plane: new THREE.PlaneGeometry(1, 1),
+      /* 瓶盖落地的那圈脉冲：单位半径 + 细管，靠 scale 决定大小 */
+      capPulse: new THREE.TorusGeometry(1, 0.06, 6, 18),
     };
   }
 
@@ -1876,6 +2198,41 @@
     return new THREE.CanvasTexture(c);
   }
 
+  /* 漩涡旋纹：透明底 + 3 条暖色螺旋弧，加色混合后压在液面上 */
+  function swirlTexture() {
+    if (TEX.swirl) return TEX.swirl;
+    var c = document.createElement("canvas");
+    c.width = c.height = 256;
+    var g = c.getContext("2d");
+    g.clearRect(0, 0, 256, 256);
+    var grd = g.createRadialGradient(128, 128, 6, 128, 128, 126);
+    grd.addColorStop(0, "rgba(246,205,133,0.30)");
+    grd.addColorStop(0.62, "rgba(233,169,78,0.12)");
+    grd.addColorStop(1, "rgba(233,169,78,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 256, 256);
+
+    g.lineCap = "round";
+    for (var i = 0; i < 3; i++) {
+      var a0 = (i / 3) * Math.PI * 2;
+      for (var s = 0; s < 28; s++) {
+        var t = s / 27;
+        var a = a0 + t * Math.PI * 1.6;
+        var r = 12 + t * 110;
+        var al = Math.sin(Math.PI * Math.min(1, 0.18 + t * 1.05)) * 0.85;
+        g.strokeStyle = "rgba(246,205,133," + al.toFixed(3) + ")";
+        g.lineWidth = 1.4 + t * 5.2;
+        g.beginPath();
+        g.arc(128, 128, r, a, a + 0.3, false);
+        g.stroke();
+      }
+    }
+    var tex = new THREE.CanvasTexture(c);
+    tex.minFilter = THREE.LinearFilter;
+    TEX.swirl = tex;
+    return tex;
+  }
+
   /* ---------------- 打开 / 关闭 ---------------- */
   function openScene() {
     mount();
@@ -1919,6 +2276,8 @@
     state.phase = "idle";
     state.dragging = null;
     state.orbit = false;
+    state.press = null;
+    state.poke = null;
     if (els.root) {
       els.root.classList.remove("is-open");
       els.root.setAttribute("aria-hidden", "true");
@@ -1989,13 +2348,22 @@
 
     updateCamera();
     updateCharacter(dt, now);
+    updatePendants(dt);
     placeSay();
     updateBottle(dt);
+    updateSwirl(dt, now);
+    updateCaps(now);
     updateJars();
     updateOrbs(now);
     updateDrops(dt);
     if (state.overBottle && glowRing) glowRing.material.opacity = 0.55 + Math.sin(now / 140) * 0.25;
-    else if (glowRing) glowRing.material.opacity += (0.6 - glowRing.material.opacity) * 0.1;
+    else if (glowRing) glowRing.material.opacity += ((state.capsSealed ? 0.85 : 0.6) - glowRing.material.opacity) * 0.1;
+    /* 集齐那一记额外增亮：0.9s 内压在铜边上，之后由上面的 lerp 收到 0.85 */
+    if (glowRing && state.sealGlowAt) {
+      var seal = clamp(1 - (now - state.sealGlowAt) / 900, 0, 1);
+      if (seal > 0) glowRing.material.opacity = Math.min(1, glowRing.material.opacity + seal * 0.5);
+      else state.sealGlowAt = 0;
+    }
 
     renderer.render(scene, camera);
     requestAnimationFrame(loop);
@@ -2059,6 +2427,97 @@
         head.rotation.x = -0.16 * kk;
       }
     }
+
+    /* 点一下的反应：叠在呼吸与试饮之上，但绝不碰 position.y 与 char.rotation.y */
+    updatePoke(now);
+  }
+
+  /* ---------------- 点一下酿酒师 ----------------
+     四档循环，第 4 档（上唇沾泡沫）每个会话只演一次。
+     全部用 performance.now() 差值驱动，不排定时器 —— 掉帧时也不会错拍。 */
+  var POKE_LINES = [
+    ["嗯？想听我讲讲？", "先投两样，我边喝边说。"],
+    ["这屋子，二十二年了。", "木头都喝出酒味了。"],
+    ["再点我一次，有秘密。", "我这儿不缺时间。"],
+    ["看什么，胡子上的？", "擦不掉了。"],
+  ];
+
+  function rampK(t, up, hold, down) {
+    if (t <= 0) return 0;
+    if (t < up) return ease(t / up);
+    if (t < up + hold) return 1;
+    if (t < up + hold + down) return 1 - ease((t - up - hold) / down);
+    return 0;
+  }
+
+  function pokeDone(t, up, hold, down) { return t >= up + hold + down; }
+
+  function clearPoke() {
+    state.poke = null;
+    if (!char) return;
+    head.rotation.y = 0;
+    if (state.reactAt <= 0) {
+      head.rotation.x = 0;
+      armR.rotation.x = char.userData.armRBaseX;
+    }
+    var armL = char.userData.armL;
+    if (armL && armL.userData.baseZ != null) armL.rotation.z = armL.userData.baseZ;
+    if (foamLip) foamLip.visible = false;
+  }
+
+  function updatePoke(now) {
+    var p = state.poke;
+    if (!p || !char) return;
+    var t = now - p.at;
+    var armL = char.userData.armL;
+    var baseZ = armL && armL.userData.baseZ != null ? armL.userData.baseZ : -0.09;
+    var busy = state.reactAt > 0;
+
+    if (p.stage === 1) {
+      /* 看你：头轻轻转过来，停半秒再回去 */
+      head.rotation.y = -0.14 * rampK(t, 180, 500, 300);
+      if (pokeDone(t, 180, 500, 300)) clearPoke();
+    } else if (p.stage === 2) {
+      /* 举杯：手臂抬起来；正在试饮就让位，只把头往杯子的方向偏一点 */
+      var k2 = rampK(t, 220, 600, 320);
+      if (busy) head.rotation.y = 0.12 * k2;
+      else { head.rotation.y = 0; armR.rotation.x = char.userData.armRBaseX - 0.75 * k2; }
+      if (pokeDone(t, 220, 600, 320)) clearPoke();
+    } else if (p.stage === 3) {
+      /* 闻杯：低头凑近，手臂跟到一半 */
+      var k3 = rampK(t, 240, 700, 400);
+      head.rotation.y = 0;
+      head.rotation.x = -0.16 * k3;
+      if (!busy) armR.rotation.x = char.userData.armRBaseX - 0.4 * k3;
+      if (pokeDone(t, 240, 700, 400)) clearPoke();
+    } else {
+      /* 彩蛋：抬手抹一把上唇，泡沫在收手时消失 */
+      var k4 = rampK(t, 300, 420, 500);
+      head.rotation.y = 0;
+      if (armL) armL.rotation.z = baseZ + (0.95 - baseZ) * k4;
+      if (foamLip) foamLip.visible = t < 300 + 420 + 420;
+      if (pokeDone(t, 300, 420, 500)) {
+        state.foamDone = true;
+        clearPoke();
+      }
+    }
+  }
+
+  function tapCharacter() {
+    if (!char || state.phase !== "live") return;
+    var now = performance.now();
+    if (now - state.lastPoke < 600) {
+      /* 连点只重播当前这一档，不往下跳 */
+      if (state.charStage) state.poke = { at: now, stage: state.charStage };
+      return;
+    }
+    state.lastPoke = now;
+    var next = state.charStage >= 4 ? 1 : state.charStage + 1;
+    if (next === 4 && state.foamDone) next = 1;   /* 彩蛋每会话一次，之后回到第 1 档 */
+    state.charStage = next;
+    if (next === 4) state.foamDone = true;
+    state.poke = { at: now, stage: next };
+    sayPair(POKE_LINES[next - 1], 80, 0);
   }
 
   /* ---------------- 台词 ----------------
@@ -2076,6 +2535,7 @@
   var sayBox = { w: 0, h: 0 };
   var sayTimers = [];
   var sayRO = null;
+  var sayState = { prio: -1, at: 0 };
 
   function clearSayTimers() {
     for (var i = 0; i < sayTimers.length; i++) global.clearTimeout(sayTimers[i]);
@@ -2085,28 +2545,56 @@
   function hideSay() {
     clearSayTimers();
     if (els.say) els.say.classList.remove("is-on", "is-two");
+    sayState.prio = -1;
   }
 
-  /* 投放落定后约 1 秒才开口：先抬手、入口，再说话 */
-  function queueSay(ex) {
-    if (!els.say) return;
+  /* 台词仲裁：任何时候只留一个气泡。
+     优先级 瓶盖 2 > 投料 1 > 人物 0，低优先级的插不进正在说话的高优先级；
+     气泡刚出来不到 700ms 时不重播淡入，只换字 —— 连续投料不会闪成一片。 */
+  function sayPair(pair, delay, prio) {
+    if (!els.say || !pair) return;
+    prio = prio || 0;
+    delay = delay > 0 ? delay : 0;
+    var now = performance.now();
+    var showing = els.say.classList.contains("is-on");
+    var busy = showing || sayTimers.length > 0;
+
+    if (busy && sayState.prio > prio) return;
+
+    if (showing && now - sayState.at < 700) {
+      clearSayTimers();
+      els.sayLines[0].textContent = pair[0];
+      els.sayLines[1].textContent = pair[1];
+      els.say.classList.remove("is-two");
+      measureSay();
+      sayTimers.push(global.setTimeout(function () {
+        if (state.opened) els.say.classList.add("is-two");
+      }, REDUCE ? 60 : 1250));
+      sayTimers.push(global.setTimeout(hideSay, REDUCE ? 5000 : 6100));
+      sayState.at = now;
+      sayState.prio = prio;
+      return;
+    }
+
     hideSay();
-    var pair = LINES[clamp(ex | 0, 0, 4)];
+    sayState.prio = prio;
     sayTimers.push(global.setTimeout(function () {
       if (!state.opened) return;
       els.sayLines[0].textContent = pair[0];
       els.sayLines[1].textContent = pair[1];
       els.say.classList.add("is-on");
+      sayState.at = performance.now();
       measureSay();
-    }, REDUCE ? 120 : 960));
-    if (!REDUCE) {
-      sayTimers.push(global.setTimeout(function () {
-        if (state.opened) els.say.classList.add("is-two");
-      }, 960 + 1250));
-    } else if (els.say) {
-      els.say.classList.add("is-two");
-    }
+    }, REDUCE ? Math.min(delay, 120) : delay));
+    sayTimers.push(global.setTimeout(function () {
+      if (state.opened) els.say.classList.add("is-two");
+    }, (REDUCE ? Math.min(delay, 120) : delay) + (REDUCE ? 60 : 1250)));
     sayTimers.push(global.setTimeout(hideSay, REDUCE ? 5000 : 6100));
+  }
+
+  /* 投放落定后约 1 秒才开口：先抬手、入口，再说话 */
+  function queueSay(ex) {
+    sayPair(LINES[clamp(ex | 0, 0, 4)], 960, 1);
   }
 
   function measureSay() {
@@ -2114,6 +2602,13 @@
     sayBox.w = els.say.offsetWidth;
     sayBox.h = els.say.offsetHeight;
     placeSay();
+  }
+
+  /* 切语言：气泡里的中文可能已经被换掉，先收起再重量一次 */
+  function onLangChange() {
+    hideSay();
+    measureSay();
+    paintPlates();
   }
 
   /* 每帧把脑袋的世界坐标投到屏幕，气泡贴在上面，尾巴对准脑袋 */
@@ -2143,6 +2638,32 @@
     surface.material.opacity = 0.22 + liquid.scale.y * 0.2;
   }
 
+  /* 漩涡：随液面走，投料后转几圈自己停。停稳与液面见底时整块隐藏（回到 0 draw call）。 */
+  function updateSwirl(dt, now) {
+    if (!swirl || !liquid) return;
+    var lvl = liquid.scale.y;
+    swirl.position.y = 0.26 + lvl + 0.002;
+    if (REDUCE) {
+      /* 减弱动效：不转，只在投料时亮一下 */
+      var p = state.swirlPulse ? clamp(1 - (now - state.swirlPulse) / 150, 0, 1) : 0;
+      swirl.visible = p > 0.02 && lvl > 0.045;
+      if (swirl.visible) swirl.material.opacity = 0.34 * p;
+      return;
+    }
+    state.spin *= Math.pow(0.94, dt * 60);
+    if (state.spin < 0.03 || lvl < 0.08) { swirl.visible = false; return; }
+    swirl.visible = true;
+    swirl.rotation.z += state.spin * dt;
+    swirl.material.opacity = Math.min(0.42, state.spin * 0.16);
+  }
+
+  /* 投料时给漩涡一脚：越满转得越狠，但到 4.2 就封顶 */
+  function kickSwirl() {
+    if (REDUCE) { state.swirlPulse = performance.now(); return; }
+    var n = S(null).count;
+    state.spin = Math.min(4.2, Math.max(state.spin, 2.6 + n * 0.08));
+  }
+
   /* 悬停抬升：比换材质更轻，也不会破坏每件原料自己的颜色 */
   function updateJars() {
     for (var i = 0; i < jars.length; i++) {
@@ -2167,20 +2688,30 @@
     return r;
   }
 
+  /* 悬停设备的判断：触屏上没有“悬停”，别把光标改来改去 */
+  var canHover = null;
+  function hoverable() {
+    if (canHover == null) canHover = !!(global.matchMedia && global.matchMedia("(hover: hover)").matches);
+    return canHover;
+  }
+
   function onDown(e) {
-    if (!state.opened || state.phase === "loading") return;
+    /* 加载与入场动画期间都不接操作，进场之后才开始认人 */
+    if (!state.opened || state.phase !== "live" || state.dragging || state.orbit) return;
     if (e.button !== 0 && e.pointerType === "mouse") return;
     ndcFromEvent(e);
     ray.setFromCamera(ndc, camera);
-    var hits = ray.intersectObjects(pick, false);
+    /* 一次 raycast 同时测原料与人物，取最近的那个命中 */
+    var hits = ray.intersectObjects(pick.concat(charPick), false);
     state.moved = 0;
     state.lx = e.clientX;
     state.ly = e.clientY;
     jars.forEach(function (j) { j.userData.hoverOn = false; });
 
-    if (hits.length) {
-      var jar = hits[0].object.userData.jar;
-      if (!jar) return;
+    var hit = hits.length ? hits[0] : null;
+
+    if (hit && hit.object.userData.jar) {
+      var jar = hit.object.userData.jar;
       state.dragging = jar;
       state.dragDist = camera.position.distanceTo(jar.position);
       jar.userData.dragHome = jar.position.clone();
@@ -2191,6 +2722,16 @@
       e.preventDefault();
       return;
     }
+
+    if (hit && hit.object.userData.char) {
+      /* 按在人物身上：先记一笔，抬手时再判断是“点”还是“转视角” */
+      state.press = { t: performance.now(), x: e.clientX, y: e.clientY };
+      state.moved = 0;
+      els.canvas.style.cursor = "grabbing";
+      if (els.tip) els.tip.classList.remove("is-on");
+      return;
+    }
+
     state.orbit = true;
     cam.vT = 0;
     cam.vP = 0;
@@ -2199,14 +2740,36 @@
 
   function onMove(e) {
     if (!state.opened) return;
+
+    /* 按住人物还没抬手：挪得少就等着当一次点击，挪过头了转成一圈视角 */
+    if (state.press) {
+      var px0 = e.clientX - state.press.x;
+      var py0 = e.clientY - state.press.y;
+      if (Math.abs(px0) + Math.abs(py0) <= 6) return;
+      state.press = null;
+      els.canvas.style.cursor = "";
+      state.orbit = true;
+      state.moved = 99;
+      state.lx = e.clientX;
+      state.ly = e.clientY;
+      cam.vT = -px0 * 0.0016;
+      cam.vP = -py0 * 0.0013;
+      return;
+    }
+
     if (!state.dragging && !state.orbit) {
       /* 悬停：整件抬一点、底环亮起来 */
       ndcFromEvent(e);
       ray.setFromCamera(ndc, camera);
       var hit = ray.intersectObjects(pick, false)[0];
       var overJar = hit ? hit.object.userData.jar : null;
+      var overChar = null;
+      if (!hit && hoverable() && charPick.length) {
+        var ch = ray.intersectObjects(charPick, false)[0];
+        overChar = ch ? ch.object.userData.char : null;
+      }
       jars.forEach(function (j) { j.userData.hoverOn = j === overJar; });
-      els.canvas.style.cursor = hit ? "grab" : "";
+      els.canvas.style.cursor = hit ? "grab" : overChar ? "pointer" : "";
       if (hit) {
         var jid = overJar.userData.id;
         var inf = L(jid);
@@ -2247,6 +2810,16 @@
 
   function onUp(e) {
     if (!state.opened) return;
+    if (state.press) {
+      var p = state.press;
+      state.press = null;
+      els.canvas.style.cursor = "";
+      /* 指针被系统收走（pointercancel）时只清状态，不派发点击 */
+      if (e.type !== "pointercancel" && state.moved < 6 && performance.now() - p.t < 400) {
+        tapCharacter();
+      }
+      return;
+    }
     if (state.dragging) {
       var jar = state.dragging;
       var id = jar.userData.id;
@@ -2276,6 +2849,15 @@
     if (!state.opened) return;
     e.preventDefault();
     cam.tRadius = clamp(cam.tRadius + Math.sign(e.deltaY) * 0.55, 5.4, 12.5);
+  }
+
+  /* 键盘：Enter / Space 等于点一下酿酒师（画面里唯一的“说话”入口） */
+  function onCanvasKey(e) {
+    if (!state.opened) return;
+    if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+      e.preventDefault();
+      tapCharacter();
+    }
   }
 
   function onResize() {
@@ -2367,7 +2949,11 @@
     var info = L(id);
     state.reactEx = S(id).ex;
     state.reactAt = performance.now() + 260;
-    queueSay(state.reactEx);
+    kickSwirl();
+    /* 先看这一投有没有凑齐族配对：瓶盖台词优先级最高，抢在试饮反应前面说 */
+    var got = checkCaps();
+    if (got >= 0) sayPair(CAP_SAY[got], 960, 2);
+    else queueSay(state.reactEx);
     if (was) {
       /* 已在瓶中：给瓶身一个脉冲即可 */
       flash = 0.4;
@@ -2518,6 +3104,14 @@
       level: liquid ? +liquid.scale.y.toFixed(2) : null,
       dragging: !!state.dragging,
       over: state.overBottle,
+      /* 彩蛋验收用 */
+      caps: state.caps.slice(),
+      capsSealed: state.capsSealed,
+      charStage: state.charStage,
+      sayOn: !!(els.say && els.say.classList.contains("is-on")),
+      spin: +state.spin.toFixed(2),
+      /* 吊灯摆角，供自动化对比（0 表示静止） */
+      pendantAng: pendants.map(function (p) { return +(p.userData.ang || 0).toFixed(3); }),
       render: renderer ? { calls: renderer.info.render.calls, tris: renderer.info.render.triangles } : null,
       box: jars.length ? (function () {
         var b = new THREE.Box3().setFromObject(jars[0]);
