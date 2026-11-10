@@ -588,7 +588,7 @@ body.l3d-lock { overflow: hidden; }
 .l3d-say.is-two .l3d-say-l + .l3d-say-l { opacity: 1; transform: none; }
 
 @media (max-width: 900px) {
-  .l3d-say { max-width: 218px; }
+  .l3d-say { max-width: 232px; }
   .l3d-say-in { padding: 8px 11px 9px; }
   .l3d-say-l { font-size: 11.5px; line-height: 1.45; }
 }

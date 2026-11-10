@@ -191,11 +191,13 @@ WAAPI 可以在节点插入后的同一帧手动指定 `from`，补间才成立�
 - **台词仲裁**：`queueSay` 只是 `sayPair(pair, delay, prio)` 的薄壳，优先级 瓶盖 2 > 投料 1 > 人物 0；
   低优先级不会打断正在显示的高优先级，气泡刚出现不到 700 ms 时只换字、不重播淡入，所以任何时刻只有一个气泡。
 - **彩蛋**：吊灯挂在天花板 `pivot` 上，用阻尼弹簧跟随镜头角速度摆动（`PointLight` 留在原组里，
-  否则全场材质的受光每帧都在抖）；酿酒师只有颅骨 / 躯干 / 胸廓 / 髋四个网格进 `charPick[]`，
-  `onDown` 一次 raycast 同时测原料与人物，按下未超过 6 px 才在抬手时判定成“点”，四档动作用
-  `performance.now()` 差值插值而不是定时器；六枚瓶盖按风味族配对，空凹位是 1 个 `InstancedMesh`
-  （+1 draw call），铜盖解锁前 `visible=false`（0 成本），解锁时从瓶口抛物线飞入；瓶内漩涡是液面上方
-  2 mm 的一张 canvas 旋纹，转速 `spin` 按 0.94/帧衰减，转停即隐藏。四项合计峰值 +14 draw call / +1.0k 三角面。
+  否则全场材质的受光每帧都在抖，发光项随摆幅微调 ≤10%，免得读成灯在闪）；酿酒师只有颅骨 + 胸廓
+  两个网格进 `charPick[]`，`onDown` 一次 raycast 同时测原料与人物，按下未超过 6 px 才在抬手时判定成
+  “点”，四档动作用 `performance.now()` 差值插值而不是定时器；六枚瓶盖按风味族配对（槽位与规则固定
+  绑定），空凹位是 1 个 `InstancedMesh`（+1 draw call），铜盖双色 —— 盖面取第一个族的色、冠圈取第二个族
+  的色，解锁前 `visible=false`（0 成本），每次投料最多解锁一枚（取序号最小的未收集项），从瓶口抛物线
+  飞入；瓶内漩涡是液面上方 2 mm 的一张 canvas 三臂旋纹，转速 `spin` 按 0.94/帧衰减，转停即隐藏。
+  四项合计峰值 +18 draw call / +1.8k 三角面。
 - **键盘**：`#l3dCanvas` 带 `tabindex` 与 `aria-label`，Enter / Space 等同点一下酿酒师，
   金色焦点环用 `outline-offset:-3px` 画在视口内（满屏 canvas 的外描边会被裁掉）；台词气泡是
   `role="status" aria-live="polite" aria-atomic="true"`，一句话只播报一次。

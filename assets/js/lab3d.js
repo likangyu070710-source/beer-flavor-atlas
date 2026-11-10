@@ -424,6 +424,9 @@
       new THREE.ConeGeometry(0.255, 0.24, 30, 1, true),
       mat(0xffcf94, { r: 0.6, e: 0.6, back: true })
     );
+    /* mat() 是全局缓存：两盏灯拿到的是同一个实例，改发光强度会两盏一起变。
+       摆动要各自呼吸，这里必须 clone 一份。 */
+    inner.material = inner.material.clone();
     inner.position.y = 0.075 - hang;
     pivot.add(inner);
 
@@ -445,6 +448,10 @@
 
     g.userData.pivot = pivot;
     g.userData.glow = glow;
+    g.userData.inner = inner;
+    g.userData.bulb = bulb;
+    g.userData.lamp = lamp;
+    g.userData.power = power;
     g.userData.ang = 0;
     g.userData.vel = 0;
 
@@ -452,30 +459,43 @@
     return g;
   }
 
+  var BULB_BASE = new THREE.Color(0xffe0b4);
+  var BULB_WARM = new THREE.Color(0xfff3dc);
+
   /* 吊灯惯性：镜头一转，灯跟着“甩”一下再荡回来。
-     没加任何 mesh，只让 pivot 绕 z 轴转，g 与 pendants[] 都不动。 */
+     没加任何 mesh，只让 pivot 绕 z 轴转，g 与 pendants[] 都不动。
+     发光跟着摆幅微调（单次变化 ≤10%），否则摆动会读成灯在接触不良。 */
   function updatePendants(dt) {
     if (!pendants.length) return;
     var t0 = clamp(cam.vT * 6, -0.1, 0.1);
     var t1 = clamp(cam.vP * 6, -0.1, 0.1) * -0.7;
     for (var i = 0; i < pendants.length; i++) {
       var p = pendants[i];
-      var piv = p.userData.pivot, glow = p.userData.glow;
+      var u = p.userData;
+      var piv = u.pivot;
       if (!piv) continue;
       if (REDUCE) {
         piv.rotation.z = 0;
-        p.userData.ang = 0;
-        p.userData.vel = 0;
-        if (glow) glow.material.opacity = 0.5;
+        u.ang = 0;
+        u.vel = 0;
+        if (u.glow) u.glow.material.opacity = 0.5;
+        if (u.inner) u.inner.material.emissiveIntensity = 0.6;
+        if (u.bulb) u.bulb.material.color.copy(BULB_BASE);
+        if (u.lamp) u.lamp.intensity = u.power * 0.9;
         continue;
       }
       var target = i ? t1 : t0;
       /* 阻尼弹簧：往目标角追，越过再荡回来 */
-      p.userData.vel += (-(p.userData.ang - target) * 9 - p.userData.vel * 1.1) * dt;
-      p.userData.ang += p.userData.vel * dt;
-      p.userData.ang = clamp(p.userData.ang, -0.19, 0.19);
-      piv.rotation.z = p.userData.ang;
-      if (glow) glow.material.opacity = 0.5 + Math.abs(p.userData.ang) * 0.6;
+      u.vel += (-(u.ang - target) * 9 - u.vel * 1.1) * dt;
+      u.ang += u.vel * dt;
+      u.ang = clamp(u.ang, -0.19, 0.19);
+      piv.rotation.z = u.ang;
+
+      var k = Math.min(1, Math.abs(u.ang) / 0.14);
+      if (u.glow) u.glow.material.opacity = 0.5 + 0.07 * k;
+      if (u.inner) u.inner.material.emissiveIntensity = 0.6 - 0.11 * k;
+      if (u.bulb) u.bulb.material.color.copy(BULB_BASE).lerp(BULB_WARM, 0.1 * k);
+      if (u.lamp) u.lamp.intensity = u.power * 0.9 * (1 - 0.04 * k);
     }
   }
 
@@ -833,7 +853,7 @@
     /* 瓶内漩涡：液面是一张纯色圆片，只转材质看不出变化，
        所以再压一张画出来的旋纹 —— 投料后转几圈自己停下，静止时 0 draw call。 */
     swirl = new THREE.Mesh(
-      new THREE.CircleGeometry(0.295, 32),
+      new THREE.CircleGeometry(0.30, 40),
       new THREE.MeshBasicMaterial({
         map: swirlTexture(), transparent: true, opacity: 0,
         depthWrite: false, blending: THREE.AdditiveBlending,
@@ -895,7 +915,8 @@
 
   /* ---------------- 六枚瓶盖 ----------------
      按风味族配对，不认具体化合物：只要瓶里同时出现过某两族，就掉一枚盖子。
-     空凹位是常驻的可发现性暗示（1 个 InstancedMesh），盖子本身解锁前不占 draw call。 */
+     槽位与规则固定绑定（槽 0 恒为酵母×酒花……），所以中途是「随机几个坑先亮」。
+     空凹位是常驻的可发现性暗示（1 个 InstancedMesh），盖子解锁前不占 draw call。 */
   var CAP_PAIRS = [
     { a: "yeast", b: "hop" },
     { a: "yeast", b: "malt" },
@@ -909,10 +930,22 @@
     ["果香酒花，酵母碰酒花。", "垫台记下了。"],
     ["香蕉面包，酵母吃过麦芽。", "垫台记下了。"],
     ["香料花园，酒花遇见酚。", "垫台记下了。"],
-    ["烟熏焦糖，麦芽带上了火。", "垫台记下了。"],
-    ["野菌发酵，菌群自己作主。", "垫台记下了。"],
-    ["六枚都在，垫台记下了。", "往后这屋子有你一份。"],
+    ["酚类点了火，麦芽焦了。", "垫台记下了。"],
+    ["野菌接手，酵母退了。", "垫台记下了。"],
+    ["六枚都在了。", "往后这屋子有你一份。"],
   ];
+
+  /* 弧位：-52° … +52°，步长 20.8°，半径 0.78。弧长 0.283，盖径 0.175，不会叠。 */
+  var CAP_R = 0.78;
+  var CAP_Y = 0.2075;        /* 盖心 */
+  var CAP_RING_Y = 0.2062;   /* 凹位刻痕，比盖低一点，盖上后不打架 */
+  var CAP_TILT = 12 * Math.PI / 180;
+
+  function capAngle(i) { return (-52 + 20.8 * i) * Math.PI / 180; }
+  function capSlot(i) {
+    var a = capAngle(i);
+    return new THREE.Vector3(Math.sin(a) * CAP_R, CAP_Y, Math.cos(a) * CAP_R);
+  }
 
   var capFam = {}, capFamColor = {}, capReady = false;
 
@@ -929,18 +962,18 @@
     capReady = true;
   }
 
-  /* 族色往铜色里兑一点、再压暗一档：六枚盖子仍是一套手作调子，
-     也压得住头顶吊灯的直射，不会在浅木垫台上糊成六个白点 */
-  function capColor(pair) {
+  /* 双色：盖面用第一个族、冠圈用第二个族 —— 六枚连起来才构成一张族对表。
+     都往铜色里兑一点，压得住头顶吊灯的直射，不会在浅木垫台上糊成白点。
+     麦芽作冠圈时压到 #96593A：酵母金和麦芽铜只差 12° 色相，2px 冠圈会糊成一块。 */
+  function capColors(pair) {
     readCapFamilies();
-    var col = cssColor(capFamColor[pair.a] || "#b5813a");
-    return col.lerp(cssColor(0x8d5a33), 0.34).multiplyScalar(0.4);
-  }
-
-  /* 凹位坐标：垫台顶面 y=0.207，半径 0.72，-75° 起每 30° 一个 */
-  function capSlot(i) {
-    var a = (-75 + 30 * i) * Math.PI / 180;
-    return new THREE.Vector3(Math.sin(a) * 0.72, 0.207, Math.cos(a) * 0.72);
+    var face = cssColor(capFamColor[pair.a] || "#b5813a")
+      .lerp(cssColor(0xb5813a), 0.3).multiplyScalar(0.5);
+    var band = pair.b === "malt"
+      ? cssColor(0x96593a)
+      : cssColor(capFamColor[pair.b] || "#8d5a33").lerp(cssColor(0xb5813a), 0.2);
+    band.multiplyScalar(0.56);
+    return { face: face, band: band };
   }
 
   function setCapOpacity(g, v) {
@@ -948,17 +981,21 @@
   }
 
   function buildCaps() {
-    var geo = new THREE.TorusGeometry(0.052, 0.0045, 6, 18);
+    /* 凹位刻痕：6 个同形环，1 个 InstancedMesh，环半径 0.095 贴着盖边 */
+    var geo = new THREE.TorusGeometry(0.095, 0.006, 6, 20);
     geo.rotateX(-Math.PI / 2);   /* 先把环放平，实例矩阵就只剩平移 */
     capSockets = new THREE.InstancedMesh(
       geo,
-      new THREE.MeshBasicMaterial({ color: 0x8a6a44, transparent: true, opacity: 0.55 }),
+      new THREE.MeshBasicMaterial({
+        color: 0x8a6a44, transparent: true, opacity: 0.55, depthWrite: false,
+      }),
       CAP_PAIRS.length
     );
+    capSockets.renderOrder = 1;
     var m4 = new THREE.Matrix4();
     for (var i = 0; i < CAP_PAIRS.length; i++) {
       var p = capSlot(i);
-      m4.makeTranslation(p.x, p.y, p.z);
+      m4.makeTranslation(p.x, CAP_RING_Y, p.z);
       capSockets.setMatrixAt(i, m4);
     }
     capSockets.instanceMatrix.needsUpdate = true;
@@ -967,18 +1004,30 @@
 
     capMeshes = CAP_PAIRS.map(function (pair, idx) {
       var g = new THREE.Group();
-      /* 顶部就是吊灯，金属度一高就只剩一片高光；宁可粗一点，让族色看得清 */
-      var mt = new THREE.MeshStandardMaterial({
-        color: capColor(pair), roughness: 0.78, metalness: 0.12,
+      var cols = capColors(pair);
+      /* 盖面 14–16 段平面着色就读成「压边盖」；冠圈单独一个材质，双色才立得住 */
+      var faceMat = new THREE.MeshStandardMaterial({
+        color: cols.face, roughness: 0.82, metalness: 0.2,
+        flatShading: true, transparent: true, opacity: 1,
+      });
+      var bandMat = new THREE.MeshStandardMaterial({
+        color: cols.band, roughness: 0.68, metalness: 0.26,
         transparent: true, opacity: 1,
       });
-      var face = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.008, 12), mt);
+      var face = new THREE.Mesh(new THREE.CylinderGeometry(0.0875, 0.0875, 0.012, 16), faceMat);
+      face.position.y = 0.004;
       g.add(face);
-      var teeth = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.004, 5, 14), mt);
-      teeth.rotation.x = Math.PI / 2;
-      g.add(teeth);
+      /* 冠圈压到盖面下缘并外扩一点，俯视才看得见那圈深色压边 */
+      var band = new THREE.Mesh(new THREE.TorusGeometry(0.089, 0.0075, 6, 18), bandMat);
+      band.rotation.x = Math.PI / 2;
+      band.position.y = -0.004;
+      g.add(band);
+
+      /* 统一朝瓶心倾 12°（绕切向轴）：六枚高光落在同一侧，整排读成一条弧 */
+      var a = capAngle(idx);
+      g.quaternion.setFromAxisAngle(new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)), CAP_TILT);
+      g.userData.quat = g.quaternion.clone();
       g.position.copy(capSlot(idx));
-      g.rotation.z = (idx % 2 ? 1 : -1) * (0.1 + 0.05 * (idx % 3));
       g.visible = false;
       bottle.add(g);
       return g;
@@ -989,16 +1038,21 @@
     return mouthWorld.clone().sub(bottle.position);
   }
 
-  /* 瓶口一捧光：复用吊灯那张暖光贴图，900ms 散掉，用完删 */
-  function mouthFlash(now) {
+  /* 瓶口一捧光：复用吊灯那张暖光贴图。第 1 枚收半档，后面才是标准亮度。 */
+  function mouthFlash(now, first) {
+    var op = REDUCE ? 0.6 : (first ? 0.51 : 0.85);
     var sp = new THREE.Sprite(new THREE.SpriteMaterial({
       map: TEX.glowWarm, transparent: true, depthWrite: false,
-      blending: THREE.AdditiveBlending, opacity: REDUCE ? 0.6 : 0.85,
+      blending: THREE.AdditiveBlending, opacity: op,
     }));
     sp.position.copy(mouthWorld);
-    sp.scale.setScalar(REDUCE ? 0.9 : 0.35);
+    sp.scale.setScalar(REDUCE ? 0.9 : (first ? 0.5 : 0.35));
     scene.add(sp);
-    state.capFx.push({ obj: sp, kind: "flash", t0: now, dur: REDUCE ? 400 : 900 });
+    state.capFx.push({
+      obj: sp, kind: "flash", t0: now,
+      dur: REDUCE ? 400 : (first ? 450 : 900),
+      to: first ? 1.0 : 1.5,
+    });
   }
 
   /* 凹位上一圈脉冲：用完立刻 remove，不留常驻开销 */
@@ -1011,6 +1065,7 @@
     ring.position.copy(at);
     ring.rotation.x = -Math.PI / 2;
     ring.scale.setScalar(0.05);
+    ring.renderOrder = 2;
     bottle.add(ring);
     state.capFx.push({ obj: ring, kind: "ring", t0: now, dur: 500 });
   }
@@ -1018,31 +1073,32 @@
   function unlockCap(i, now) {
     if (state.caps.indexOf(i) >= 0) return false;
     state.caps.push(i);
+    var first = state.caps.length === 1;
     var g = capMeshes[i];
     if (!g) return true;
-    var slot = capSlot(i);
     if (REDUCE) {
       /* 不飞：直接落位，120ms 淡入 */
-      g.position.copy(slot);
-      g.rotation.z = (i % 2 ? 1 : -1) * (0.1 + 0.05 * (i % 3));
+      g.position.copy(capSlot(i));
+      g.quaternion.copy(g.userData.quat);
       g.visible = true;
       setCapOpacity(g, 0);
       state.capFlight.push({ mesh: g, kind: "fade", t0: now, dur: 120 });
     } else {
+      /* 抛物线三档完全一致：变光不变盖，飞得长短会被读成物理出错 */
       g.position.copy(mouthLocal());
       g.scale.setScalar(1);
       g.visible = true;
       state.capFlight.push({
         mesh: g, kind: "fly", t0: now, dur: 620,
-        from: mouthLocal(), to: slot.clone(),
+        from: mouthLocal(), to: capSlot(i),
       });
     }
-    mouthFlash(now);
+    mouthFlash(now, first);
     return true;
   }
 
-  /* 返回本次要说的那一枚（没有解锁返回 -1）：
-     同一次投料可能同时凑齐两组，取序号最大的一枚，集齐时自然是第 6 枚。 */
+  /* 一次 commit 最多解锁 1 枚：取槽位序号最小的未收集命中项。
+     否则两枚盖同飞、闪两次光、两套台词抢同一个气泡。 */
   function checkCaps() {
     if (!capSockets) return -1;
     readCapFamilies();
@@ -1054,11 +1110,10 @@
     var got = -1;
     for (var i = 0; i < CAP_PAIRS.length; i++) {
       if (state.caps.indexOf(i) >= 0) continue;
-      if (have[CAP_PAIRS[i].a] && have[CAP_PAIRS[i].b]) {
-        unlockCap(i, performance.now());
-        got = i;
-      }
+      if (have[CAP_PAIRS[i].a] && have[CAP_PAIRS[i].b]) { got = i; break; }
     }
+    if (got < 0) return -1;
+    unlockCap(got, performance.now());
     if (state.caps.length >= CAP_PAIRS.length && !state.capsSealed) {
       state.capsSealed = true;
       state.sealGlowAt = performance.now();
@@ -1088,7 +1143,7 @@
       f.mesh.rotation.x = e * 6;
       if (k >= 1) {
         f.mesh.position.copy(f.to);
-        f.mesh.rotation.x = 0;
+        f.mesh.quaternion.copy(f.mesh.userData.quat);   /* 落回「朝瓶心 12°」的姿势 */
         state.capFlight.splice(i, 1);
         state.capFlight.push({ mesh: f.mesh, kind: "bounce", t0: now, dur: 160 });
         capPulse(f.to, now);
@@ -1099,8 +1154,9 @@
       var x = state.capFx[j];
       var t = clamp((now - x.t0) / x.dur, 0, 1);
       if (x.kind === "flash") {
-        x.obj.material.opacity = (REDUCE ? 0.6 : 0.85) * (1 - t);
-        if (!REDUCE) x.obj.scale.setScalar(0.35 + 1.15 * ease(t));
+        var op0 = REDUCE ? 0.6 : (x.to > 1.1 ? 0.85 : 0.51);
+        x.obj.material.opacity = op0 * (1 - t);
+        if (!REDUCE) x.obj.scale.setScalar(0.35 + ((x.to || 1.5) - 0.35) * ease(t));
         if (t >= 1) {
           scene.remove(x.obj);
           x.obj.material.dispose();
@@ -1446,21 +1502,27 @@
     nose.position.set(0, -0.032, 0.238);
     head.add(nose);
 
-    /* 上唇那点泡沫：彩蛋第 4 档才露面，平时不参与渲染 */
-    foamLip = new THREE.Mesh(
-      new THREE.SphereGeometry(0.028, 10, 8),
-      new THREE.MeshStandardMaterial({ color: 0xf7efdd, roughness: 0.95 })
-    );
-    foamLip.scale.set(1, 0.5, 0.6);
-    foamLip.position.set(0, -0.075, 0.238);
+    /* 上唇那点泡沫：两片错开才像「沾上去」，单片会读成贴纸。
+       挂在一个 Group 上，外部只用 foamLip.visible 开关，两片一起走。 */
+    var noseBottom = -0.032 - 0.028 * 0.9;   /* 鼻底，泡沫上缘不能越过它 */
+    head.userData.noseBottom = noseBottom;
+    var foamMat = new THREE.MeshStandardMaterial({ color: 0xf7efdd, roughness: 0.95 });
+    foamLip = new THREE.Group();
+    var foamA = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 10), foamMat);
+    foamA.scale.set(0.042, 0.014, 0.014);
+    foamA.position.set(-0.038, -0.080, 0.2345);   /* 上缘 -0.066，低于鼻底 */
+    foamLip.add(foamA);
+    var foamB = new THREE.Mesh(new THREE.SphereGeometry(1, 10, 8), foamMat);
+    foamB.scale.set(0.030, 0.011, 0.012);
+    foamB.position.set(0.044, -0.072, 0.2360);    /* 上缘 -0.061，低于鼻底 */
+    foamLip.add(foamB);
     foamLip.visible = false;
     head.add(foamLip);
 
     char.userData.head = head;
     char.userData.arm = armR;
-    /* 只有躯干与脑袋可以被点中：手臂、腿、酒杯都不入列，
-       否则点哪儿都算“点到人了”，反而容易误触。 */
-    [skull, torso, chest, hips].forEach(function (m) {
+    /* 可点部位只留头与胸：髋会被垫台前沿和瓶身切掉半截，手臂附近要留出来起手转视角 */
+    [skull, chest].forEach(function (m) {
       m.userData.char = char;
       charPick.push(m);
     });
@@ -2198,35 +2260,43 @@
     return new THREE.CanvasTexture(c);
   }
 
-  /* 漩涡旋纹：透明底 + 3 条暖色螺旋弧，加色混合后压在液面上 */
+  /* 漩涡旋纹：128×128，3 条半径不同的螺旋臂。中心对称的渐变绕 Y 转在屏幕上是零变化，
+     转速看的就是这张图的转动，所以必须是旋臂而不是同心环。 */
   function swirlTexture() {
     if (TEX.swirl) return TEX.swirl;
+    var S = 128;
     var c = document.createElement("canvas");
-    c.width = c.height = 256;
+    c.width = c.height = S;
     var g = c.getContext("2d");
-    g.clearRect(0, 0, 256, 256);
-    var grd = g.createRadialGradient(128, 128, 6, 128, 128, 126);
-    grd.addColorStop(0, "rgba(246,205,133,0.30)");
-    grd.addColorStop(0.62, "rgba(233,169,78,0.12)");
-    grd.addColorStop(1, "rgba(233,169,78,0)");
-    g.fillStyle = grd;
-    g.fillRect(0, 0, 256, 256);
-
+    g.clearRect(0, 0, S, S);
     g.lineCap = "round";
-    for (var i = 0; i < 3; i++) {
-      var a0 = (i / 3) * Math.PI * 2;
-      for (var s = 0; s < 28; s++) {
-        var t = s / 27;
-        var a = a0 + t * Math.PI * 1.6;
-        var r = 12 + t * 110;
-        var al = Math.sin(Math.PI * Math.min(1, 0.18 + t * 1.05)) * 0.85;
-        g.strokeStyle = "rgba(246,205,133," + al.toFixed(3) + ")";
-        g.lineWidth = 1.4 + t * 5.2;
-        g.beginPath();
-        g.arc(128, 128, r, a, a + 0.3, false);
-        g.stroke();
+    var arms = [
+      [3.5, "rgba(255,214,150,0.55)"],
+      [2.9, "rgba(255,214,150,0.43)"],
+      [2.3, "rgba(255,214,150,0.31)"],
+    ];
+    for (var i = 0; i < arms.length; i++) {
+      g.lineWidth = arms[i][0];
+      g.strokeStyle = arms[i][1];
+      g.beginPath();
+      var a0 = (i / arms.length) * Math.PI * 2;
+      for (var s = 0; s <= 40; s++) {
+        var t = s / 40;
+        var r = 10 + t * 52;          /* 10 → 62 */
+        var a = a0 + t * 2.6;         /* 臂转角 2.6 rad */
+        var px = S / 2 + Math.cos(a) * r;
+        var py = S / 2 + Math.sin(a) * r;
+        if (s === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
       }
+      g.stroke();
     }
+    g.strokeStyle = "rgba(255,240,210,0.18)";
+    g.lineWidth = 1;
+    g.beginPath();
+    g.arc(S / 2, S / 2, 62.5, 0, Math.PI * 2);
+    g.stroke();
+
     var tex = new THREE.CanvasTexture(c);
     tex.minFilter = THREE.LinearFilter;
     TEX.swirl = tex;
@@ -2357,12 +2427,13 @@
     updateOrbs(now);
     updateDrops(dt);
     if (state.overBottle && glowRing) glowRing.material.opacity = 0.55 + Math.sin(now / 140) * 0.25;
-    else if (glowRing) glowRing.material.opacity += ((state.capsSealed ? 0.85 : 0.6) - glowRing.material.opacity) * 0.1;
-    /* 集齐那一记额外增亮：0.9s 内压在铜边上，之后由上面的 lerp 收到 0.85 */
-    if (glowRing && state.sealGlowAt) {
-      var seal = clamp(1 - (now - state.sealGlowAt) / 900, 0, 1);
-      if (seal > 0) glowRing.material.opacity = Math.min(1, glowRing.material.opacity + seal * 0.5);
-      else state.sealGlowAt = 0;
+    else if (glowRing) {
+      /* 集齐后铜边常亮到 0.85，用 1.2s 渐亮上去，不是一下子跳 */
+      var target = 0.6;
+      if (state.capsSealed) {
+        target = state.sealGlowAt ? 0.6 + 0.25 * clamp((now - state.sealGlowAt) / 1200, 0, 1) : 0.85;
+      }
+      glowRing.material.opacity += (target - glowRing.material.opacity) * 0.1;
     }
 
     renderer.render(scene, camera);
@@ -2433,14 +2504,19 @@
   }
 
   /* ---------------- 点一下酿酒师 ----------------
-     四档循环，第 4 档（上唇沾泡沫）每个会话只演一次。
+     四档循环，第 4 档（上唇沾泡沫）每个会话只演一次；演过之后档 3 整组复用档 1。
      全部用 performance.now() 差值驱动，不排定时器 —— 掉帧时也不会错拍。 */
   var POKE_LINES = [
     ["嗯？想听我讲讲？", "先投两样，我边喝边说。"],
     ["这屋子，二十二年了。", "木头都喝出酒味了。"],
-    ["再点我一次，有秘密。", "我这儿不缺时间。"],
-    ["看什么，胡子上的？", "擦不掉了。"],
+    ["……非要点第四下？", "……行吧，就一次。"],
+    ["看什么，唇上沾了沫？", "别笑，你也一样。"],
   ];
+
+  /* 彩蛋演完之后档 3 不再是「催你点第四下」，整组退回档 1 的姿态与台词 */
+  function pokeEff(stage) {
+    return stage === 3 && state.foamDone ? 1 : stage;
+  }
 
   function rampK(t, up, hold, down) {
     if (t <= 0) return 0;
@@ -2508,7 +2584,7 @@
     var now = performance.now();
     if (now - state.lastPoke < 600) {
       /* 连点只重播当前这一档，不往下跳 */
-      if (state.charStage) state.poke = { at: now, stage: state.charStage };
+      if (state.charStage) state.poke = { at: now, stage: pokeEff(state.charStage) };
       return;
     }
     state.lastPoke = now;
@@ -2516,8 +2592,8 @@
     if (next === 4 && state.foamDone) next = 1;   /* 彩蛋每会话一次，之后回到第 1 档 */
     state.charStage = next;
     if (next === 4) state.foamDone = true;
-    state.poke = { at: now, stage: next };
-    sayPair(POKE_LINES[next - 1], 80, 0);
+    state.poke = { at: now, stage: pokeEff(next) };
+    sayPair(POKE_LINES[pokeEff(next) - 1], 80, 0);
   }
 
   /* ---------------- 台词 ----------------
@@ -2558,18 +2634,23 @@
     var now = performance.now();
     var showing = els.say.classList.contains("is-on");
     var busy = showing || sayTimers.length > 0;
+    /* 单句也要能走这个接口：第二行清空、不加 is-two，
+       否则 aria-live 会把上一句残留再念一遍、measureSay 还会多算一行 */
+    var two = !!(pair[1] && pair[1].length);
 
     if (busy && sayState.prio > prio) return;
 
     if (showing && now - sayState.at < 700) {
       clearSayTimers();
       els.sayLines[0].textContent = pair[0];
-      els.sayLines[1].textContent = pair[1];
+      els.sayLines[1].textContent = two ? pair[1] : "";
       els.say.classList.remove("is-two");
       measureSay();
-      sayTimers.push(global.setTimeout(function () {
-        if (state.opened) els.say.classList.add("is-two");
-      }, REDUCE ? 60 : 1250));
+      if (two) {
+        sayTimers.push(global.setTimeout(function () {
+          if (state.opened) els.say.classList.add("is-two");
+        }, REDUCE ? 60 : 1250));
+      }
       sayTimers.push(global.setTimeout(hideSay, REDUCE ? 5000 : 6100));
       sayState.at = now;
       sayState.prio = prio;
@@ -2581,14 +2662,16 @@
     sayTimers.push(global.setTimeout(function () {
       if (!state.opened) return;
       els.sayLines[0].textContent = pair[0];
-      els.sayLines[1].textContent = pair[1];
+      els.sayLines[1].textContent = two ? pair[1] : "";
       els.say.classList.add("is-on");
       sayState.at = performance.now();
       measureSay();
     }, REDUCE ? Math.min(delay, 120) : delay));
-    sayTimers.push(global.setTimeout(function () {
-      if (state.opened) els.say.classList.add("is-two");
-    }, (REDUCE ? Math.min(delay, 120) : delay) + (REDUCE ? 60 : 1250)));
+    if (two) {
+      sayTimers.push(global.setTimeout(function () {
+        if (state.opened) els.say.classList.add("is-two");
+      }, (REDUCE ? Math.min(delay, 120) : delay) + (REDUCE ? 60 : 1250)));
+    }
     sayTimers.push(global.setTimeout(hideSay, REDUCE ? 5000 : 6100));
   }
 
@@ -2644,17 +2727,17 @@
     var lvl = liquid.scale.y;
     swirl.position.y = 0.26 + lvl + 0.002;
     if (REDUCE) {
-      /* 减弱动效：不转，只在投料时亮一下 */
+      /* 减弱动效：不转，只在投料时相对基值亮一下（基值 0.24 → +0.18 再回落） */
       var p = state.swirlPulse ? clamp(1 - (now - state.swirlPulse) / 150, 0, 1) : 0;
       swirl.visible = p > 0.02 && lvl > 0.045;
-      if (swirl.visible) swirl.material.opacity = 0.34 * p;
+      if (swirl.visible) swirl.material.opacity = 0.24 + 0.18 * p;
       return;
     }
     state.spin *= Math.pow(0.94, dt * 60);
-    if (state.spin < 0.03 || lvl < 0.08) { swirl.visible = false; return; }
+    if (state.spin < 0.05 || lvl < 0.08) { swirl.visible = false; return; }
     swirl.visible = true;
     swirl.rotation.z += state.spin * dt;
-    swirl.material.opacity = Math.min(0.42, state.spin * 0.16);
+    swirl.material.opacity = Math.min(0.55, state.spin * 0.14);
   }
 
   /* 投料时给漩涡一脚：越满转得越狠，但到 4.2 就封顶 */
@@ -3110,8 +3193,12 @@
       charStage: state.charStage,
       sayOn: !!(els.say && els.say.classList.contains("is-on")),
       spin: +state.spin.toFixed(2),
-      /* 吊灯摆角，供自动化对比（0 表示静止） */
-      pendantAng: pendants.map(function (p) { return +(p.userData.ang || 0).toFixed(3); }),
+      foamVisible: !!(foamLip && foamLip.visible),
+      /* 第一盏灯的 pivot 摆角，供自动化对比（0 表示静止） */
+      pendantAng: pendants.length ? +((pendants[0].userData.ang || 0).toFixed(3)) : 0,
+      /* 当前气泡说的是哪一行，便于断言「该说集齐时没说专属」 */
+      sayPairName: (els.say && els.say.classList.contains("is-on") && els.sayLines)
+        ? els.sayLines[0].textContent : "",
       render: renderer ? { calls: renderer.info.render.calls, tris: renderer.info.render.triangles } : null,
       box: jars.length ? (function () {
         var b = new THREE.Box3().setFromObject(jars[0]);
