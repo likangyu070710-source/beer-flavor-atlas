@@ -1,5 +1,5 @@
 /* ============================================================
-   lab3d.js — 全场景 3D 发酵舱
+   lab3d.js — 全场景 3D 酿酒实验室
    依赖：本地 assets/vendor/three.min.js（r134，不联网）
    职责：开屏加载 → 3D 房间 → 可拖拽旋转的相机 → 货架原料拖放
         → 3D 小人试饮 → HUD 同步
@@ -35,6 +35,9 @@
     charStage: 0,
     lastPoke: 0,
     foamDone: false,
+    /* 走过去喝一杯：每个会话只演一次，walk 存时间轴起点 */
+    walk: null,
+    walkDone: false,
     /* 瓶盖收藏：只放内存，不落盘，也不在开屏时回扫 */
     caps: [],
     capsSealed: false,
@@ -53,7 +56,8 @@
   var padRight = 12; /* 右侧读数面板占掉的宽度，气泡别钻到它下面 */
 
   var els = {}, scene, camera, renderer, ray, ndc, jars = [], pick = [], plates = [], bottle, liquid, surface;
-  var char, head, armR, mouthSet = {}, eyeSet = {}, browSet = {}, glassInHand;
+  var char, head, armR, mouthSet = {}, eyeSet = {}, browSet = {}, glassInHand, glassBeer;
+  var legL = null, legR = null;
   var glowRing, mouthWorld = new THREE.Vector3();
   var orbs = [], drops = [], flash = 0;
   var clock = 0, lastT = 0;
@@ -96,7 +100,7 @@
     root.id = "lab3d";
     root.setAttribute("role", "dialog");
     root.setAttribute("aria-modal", "true");
-    root.setAttribute("aria-label", "3D 发酵舱");
+    root.setAttribute("aria-label", "3D 酿酒实验室");
     root.setAttribute("aria-hidden", "true");
     root.innerHTML =
       '<canvas id="l3dCanvas" tabindex="0" aria-label="按 Enter 与酿酒师说话，Esc 退出"></canvas>' +
@@ -108,7 +112,7 @@
       '<div class="l3d-scan"></div>' +
       '<div class="l3d-tip" id="l3dTip"></div>' +
       '<header class="l3d-top">' +
-        '<div class="l3d-brand"><span class="dot"></span>3D 发酵舱</div>' +
+        '<div class="l3d-brand"><span class="dot"></span>3D 酿酒实验室</div>' +
         '<div class="l3d-top-actions">' +
           '<span class="l3d-scope"><b>原料视角</b></span>' +
           '<button type="button" class="l3d-exit" data-l3d-close>退出 3D</button>' +
@@ -137,7 +141,7 @@
           '<div class="l3d-ring"></div><div class="l3d-ring"></div><div class="l3d-ring"></div>' +
           '<div class="l3d-core">3D<small>LAB</small></div>' +
         "</div>" +
-        '<div class="l3d-load-text"><b>正在初始化发酵舱</b><span class="l3d-stage" id="l3dStage">建立三维坐标系…</span>' +
+        '<div class="l3d-load-text"><b>正在准备酿酒实验室</b><span class="l3d-stage" id="l3dStage">建立三维坐标系…</span>' +
           '<div class="l3d-progress"><i id="l3dBar"></i></div><em class="l3d-pct" id="l3dPct">0%</em></div>' +
         '<button type="button" class="l3d-skip" data-l3d-skip>SKIP</button>' +
       "</div>" +
@@ -1194,30 +1198,40 @@
     var hairM = mat(0x3b2518, { r: 0.92 });
     var ink = mat(0x2a1c14, { r: 0.55 });
 
-    /* 靴子：鞋底、鞋面、靴筒，站得住才像在干活 */
-    [-0.12, 0.12].forEach(function (x) {
+    /* 靴子 + 腿：左右各收进一个 Group，髋部就是转轴。
+       走路时整条腿绕髋前后摆，脚才不会像贴在地板上滑。 */
+    function makeLeg(side) {
+      var g = new THREE.Group();
+      g.position.set(side * 0.12, 0.665, 0);
+
       var sole = new THREE.Mesh(new THREE.SphereGeometry(0.098, 18, 12), mat(0x241812, { r: 0.82 }));
       sole.scale.set(1.02, 0.24, 1.42);
-      sole.position.set(x, 0.026, 0.035);
-      char.add(sole);
+      sole.position.set(0, -0.639, 0.035);
+      g.add(sole);
+
       var upper = new THREE.Mesh(new THREE.SphereGeometry(0.098, 18, 14), boot);
       upper.scale.set(1, 0.84, 1.3);
-      upper.position.set(x, 0.078, 0.032);
-      char.add(upper);
-      var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.09, 0.1, 14), boot);
-      shaft.position.set(x, 0.145, -0.012);
-      char.add(shaft);
-    });
+      upper.position.set(0, -0.587, 0.032);
+      g.add(upper);
 
-    /* 腿：膝盖处补一颗球，免得圆柱接缝露出来 */
-    [-0.12, 0.12].forEach(function (x) {
+      var shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.09, 0.1, 14), boot);
+      shaft.position.set(0, -0.520, -0.012);
+      g.add(shaft);
+
+      /* 膝盖处补一颗球，免得圆柱接缝露出来 */
       var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.07, 0.42, 14), pants);
-      leg.position.set(x, 0.39, -0.005);
-      char.add(leg);
+      leg.position.set(0, -0.275, -0.005);
+      g.add(leg);
+
       var knee = new THREE.Mesh(new THREE.SphereGeometry(0.079, 14, 12), pants);
-      knee.position.set(x, 0.585, 0);
-      char.add(knee);
-    });
+      knee.position.set(0, -0.080, 0);
+      g.add(knee);
+
+      char.add(g);
+      return g;
+    }
+    legL = makeLeg(-1);
+    legR = makeLeg(1);
 
     var hips = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.18, 0.25), pants);
     hips.position.y = 0.665;
@@ -1306,14 +1320,16 @@
       char.add(g);
       return g;
     }
-    makeArm(-1);
+    var armL = makeArm(-1);
     armR = makeArm(1);
     armR.rotation.x = -0.5;
     armR.rotation.z = -0.1;
-    char.userData.armL = char.children[char.children.length - 2];
+    char.userData.armL = armL;
+    char.userData.glassBaseX = 0.5;
     /* 记住手臂的静止角度：点击动作全部相对它做插值，回位才不会跑偏 */
     char.userData.armL.userData.baseZ = char.userData.armL.rotation.z;
     char.userData.armRBaseX = armR.rotation.x;
+    char.userData.armRBaseZ = armR.rotation.z;
 
     /* 手里的酒杯 */
     glassInHand = new THREE.Group();
@@ -1329,6 +1345,7 @@
     );
     beer.position.y = 0.048;
     glassInHand.add(beer);
+    glassBeer = beer;
     var foam = new THREE.Mesh(
       new THREE.CylinderGeometry(0.079, 0.074, 0.024, 16),
       new THREE.MeshStandardMaterial({ color: 0xf7efdd, roughness: 0.95 })
@@ -2380,7 +2397,7 @@
     [0.0, "建立三维坐标系…"],
     [0.18, "载入 226 项风味指标…"],
     [0.38, "校准分光仪与光源…"],
-    [0.58, "生成发酵舱与货架…"],
+    [0.58, "生成实验室与货架…"],
     [0.78, "把 24 份原料摆上架…"],
     [0.93, "准备试饮…"],
   ];
@@ -2475,15 +2492,195 @@
     camera.lookAt(TARGET);
   }
 
+  /* ---------------- 走过去喝一杯 ----------------
+     第一次凑够三样原料时演一次：走到大瓶旁、举杯喝三口、再走回原位。
+     时间轴用 performance.now() 的差值驱动，掉帧不会错拍；
+     prefers-reduced-motion 下整段跳过，只保留原地试饮。 */
+  var WK = { prep: 240, out: 1750, raise: 620, sip: 1450, low: 420, gap: 170, back: 1750, settle: 300 };
+  var WK_OUT1 = WK.prep + WK.out;
+  var WK_RAISE1 = WK_OUT1 + WK.raise;
+  var WK_SIP1 = WK_RAISE1 + WK.sip;
+  var WK_LOW1 = WK_SIP1 + WK.low;
+  var WK_BACK0 = WK_LOW1 + WK.gap;
+  var WK_BACK1 = WK_BACK0 + WK.back;
+  var WK_END = WK_BACK1 + WK.settle;
+
+  function charHome() {
+    return { x: NARROW ? 1.72 : 2.0, z: 1.0 };
+  }
+
+  /* 站位在瓶子的右前方：离垫台 1.6 上下，不会踩进去，也不挡住瓶身 */
+  function drinkSpot() {
+    var bx = bottle ? bottle.position.x : -1.25;
+    var bz = bottle ? bottle.position.z : 0.9;
+    return { x: bx + 1.25, z: bz + 1.05 };
+  }
+
+  function faceCamera(k) {
+    var tgt = Math.atan2(camera.position.x - char.position.x, camera.position.z - char.position.z);
+    char.rotation.y = lerpAngle(char.rotation.y, tgt, k);
+  }
+
+  function startDrinkWalk(now) {
+    if (!char || state.walk || state.phase !== "live" || REDUCE) return false;
+    var spot = drinkSpot();
+    state.walkDone = true;
+    state.walk = {
+      t0: now,
+      fromX: char.position.x,
+      fromZ: char.position.z,
+      spotX: spot.x,
+      spotZ: spot.z,
+    };
+    clearPoke();
+    state.reactAt = -1;
+    head.rotation.set(0, 0, head.rotation.z);
+    resetDrink();
+    if (foamLip) foamLip.visible = false;
+    return true;
+  }
+
+  function resetGait() {
+    if (legL) legL.rotation.x = 0;
+    if (legR) legR.rotation.x = 0;
+    var armL = char.userData.armL;
+    if (armL) armL.rotation.x = 0;
+  }
+
+  /* k：举杯进度 0→1；lift：三口之间的细小起落 */
+  function applyDrink(k, lift) {
+    var l = lift || 0;
+    armR.rotation.x = char.userData.armRBaseX - 1.06 * k - 0.05 * l;
+    armR.rotation.z = char.userData.armRBaseZ - 0.5 * k;
+    head.rotation.x = -0.2 * k - 0.045 * l;
+    glassInHand.rotation.x = char.userData.glassBaseX + 0.36 * k + 0.05 * l;
+    glassInHand.position.y = -0.5 + 0.045 * k;
+    glassInHand.position.z = 0.1 - 0.035 * k;
+  }
+
+  function resetDrink() {
+    armR.rotation.x = char.userData.armRBaseX;
+    armR.rotation.z = char.userData.armRBaseZ;
+    head.rotation.x = 0;
+    glassInHand.rotation.x = char.userData.glassBaseX;
+    glassInHand.position.y = -0.5;
+    glassInHand.position.z = 0.1;
+  }
+
+  function updateWalk(now) {
+    var w = state.walk;
+    if (!w || !char) return;
+    var t = now - w.t0;
+    var baseX = char.userData.armRBaseX;
+    var home = charHome();
+
+    /* 出门：先站定转向，再迈步 */
+    if (t < WK_OUT1) {
+      var u = clamp((t - WK.prep) / WK.out, 0, 1);
+      var e = u * u * (3 - 2 * u);
+      char.position.x = w.fromX + (w.spotX - w.fromX) * e;
+      char.position.z = w.fromZ + (w.spotZ - w.fromZ) * e;
+      var dir = Math.atan2(w.spotX - w.fromX, w.spotZ - w.fromZ);
+      char.rotation.y = lerpAngle(char.rotation.y, dir, 0.18);
+      var step = t < WK.prep ? 0 : Math.sin(u * Math.PI * 7);
+      char.position.y = t < WK.prep ? 0 : Math.abs(step) * 0.03;
+      if (legL) legL.rotation.x = step * 0.46;
+      if (legR) legR.rotation.x = -step * 0.46;
+      var armL = char.userData.armL;
+      if (armL) armL.rotation.x = -step * 0.22;
+      armR.rotation.x = baseX - 0.05;
+      armR.rotation.z = char.userData.armRBaseZ;
+      glassInHand.position.y = -0.5;
+      glassInHand.position.z = 0.1;
+      head.rotation.x += (0 - head.rotation.x) * 0.2;
+      return;
+    }
+
+    char.position.x = w.spotX;
+    char.position.z = w.spotZ;
+    char.position.y = 0;
+    resetGait();
+
+    /* 站定，转向镜头，把杯子端起来。
+       手臂只绕 X 转时杯子会停在脸侧，所以同时往中线收一点，
+       再把杯身往掌心上方挪 4cm —— 杯沿才真的贴到嘴前。 */
+    if (t < WK_RAISE1) {
+      var k1 = ease(clamp((t - WK_OUT1) / WK.raise, 0, 1));
+      faceCamera(0.16);
+      applyDrink(k1);
+      return;
+    }
+
+    /* 三口：手腕跟着微微起落，杯里的酒下去一截 */
+    if (t < WK_SIP1) {
+      var k2 = clamp((t - WK_RAISE1) / WK.sip, 0, 1);
+      var cyc = Math.max(0, Math.sin(k2 * Math.PI * 6));
+      faceCamera(0.16);
+      applyDrink(1, cyc);
+      if (glassBeer) {
+        var lv = 1 - 0.34 * ease(k2);
+        glassBeer.scale.y = lv;
+        glassBeer.position.y = -0.002 + 0.05 * lv;
+      }
+      return;
+    }
+
+    /* 放下杯子 */
+    if (t < WK_LOW1) {
+      var k3 = 1 - ease(clamp((t - WK_SIP1) / WK.low, 0, 1));
+      faceCamera(0.16);
+      applyDrink(k3);
+      return;
+    }
+
+    /* 走回原位 */
+    if (t < WK_BACK1) {
+      var u2 = clamp((t - WK_BACK0) / WK.back, 0, 1);
+      var e2 = u2 * u2 * (3 - 2 * u2);
+      char.position.x = w.spotX + (home.x - w.spotX) * e2;
+      char.position.z = w.spotZ + (home.z - w.spotZ) * e2;
+      var dir2 = Math.atan2(home.x - w.spotX, home.z - w.spotZ);
+      char.rotation.y = lerpAngle(char.rotation.y, dir2, 0.18);
+      var step2 = Math.sin(u2 * Math.PI * 7);
+      char.position.y = Math.abs(step2) * 0.03;
+      if (legL) legL.rotation.x = step2 * 0.46;
+      if (legR) legR.rotation.x = -step2 * 0.46;
+      var armL2 = char.userData.armL;
+      if (armL2) armL2.rotation.x = -step2 * 0.22;
+      armR.rotation.x = baseX - 0.05;
+      armR.rotation.z = char.userData.armRBaseZ;
+      glassInHand.position.y = -0.5;
+      glassInHand.position.z = 0.1;
+      head.rotation.x += (0 - head.rotation.x) * 0.2;
+      glassInHand.rotation.x = char.userData.glassBaseX;
+      return;
+    }
+
+    /* 收尾：站定，把杯子与酒面复位 */
+    if (t < WK_END) {
+      faceCamera(0.12);
+      armR.rotation.x += (baseX - armR.rotation.x) * 0.2;
+      head.rotation.x += (0 - head.rotation.x) * 0.2;
+      glassInHand.rotation.x = char.userData.glassBaseX;
+      return;
+    }
+
+    char.position.x = home.x;
+    char.position.z = home.z;
+    char.position.y = 0;
+    resetGait();
+    resetDrink();
+    if (glassBeer) {
+      glassBeer.scale.y = 1;
+      glassBeer.position.y = 0.048;
+    }
+    state.walk = null;
+  }
+
   function updateCharacter(dt, now) {
     if (!char) return;
     var t = REDUCE ? 0 : now / 1000;
-    char.position.y = Math.sin(t * 1.5) * 0.012;
     head.rotation.z = Math.sin(t * 0.7) * 0.02;
-
-    /* 始终转身面向镜头，像柜台后的店主 */
-    var target = Math.atan2(camera.position.x - char.position.x, camera.position.z - char.position.z);
-    char.rotation.y = lerpAngle(char.rotation.y, target, 0.09);
 
     /* 眨眼：每只眼各自压扁，才不会往脸中间塌 */
     var blink = (t % 4.2) > 4.05;
@@ -2494,6 +2691,18 @@
         e.scale.y += (sy - e.scale.y) * 0.45;
       }
     }
+
+    /* 走过去喝一杯时，位置、朝向、腿都交给时间轴，别让待机动画抢回去 */
+    if (state.walk) {
+      updateWalk(now);
+      return;
+    }
+
+    char.position.y = Math.sin(t * 1.5) * 0.012;
+
+    /* 始终转身面向镜头，像柜台后的店主 */
+    var target = Math.atan2(camera.position.x - char.position.x, camera.position.z - char.position.z);
+    char.rotation.y = lerpAngle(char.rotation.y, target, 0.09);
 
     /* 试饮反应 */
     if (state.reactAt > 0) {
@@ -2590,7 +2799,7 @@
   }
 
   function tapCharacter() {
-    if (!char || state.phase !== "live") return;
+    if (!char || state.phase !== "live" || state.walk) return;
     var now = performance.now();
     if (now - state.lastPoke < 600) {
       /* 连点只重播当前这一档，不往下跳 */
@@ -2977,7 +3186,8 @@
       bottle.position.x = NARROW ? -0.95 : -1.25;
       mouthWorld.set(bottle.position.x, 1.66, bottle.position.z);
     }
-    if (char) char.position.x = NARROW ? 1.72 : 2.0;
+    /* 走路途中改窗口尺寸：只更新出生点，别把正在走的人拽回去 */
+    if (char && !state.walk) char.position.x = NARROW ? 1.72 : 2.0;
     /* 手机屏太窄，架沿名字会糊成一片，只留模型 */
     plates.forEach(function (p) { p.visible = !NARROW; });
     var panel = els.root && els.root.querySelector(".l3d-right");
@@ -3043,6 +3253,14 @@
     state.reactEx = S(id).ex;
     state.reactAt = performance.now() + 260;
     kickSwirl();
+    /* 第一次凑够三样：让他端着这一杯走到大瓶旁喝一口，整个会话只演一次。
+       延后 900ms，先让酒液落进瓶里，也让试饮台词先冒出来。 */
+    if (!state.walkDone && !REDUCE && S(null).ids.length >= 3) {
+      state.walkDone = true;
+      global.setTimeout(function () {
+        if (state.opened) startDrinkWalk(performance.now());
+      }, 900);
+    }
     /* 先看这一投有没有凑齐族配对：瓶盖台词优先级最高，抢在试饮反应前面说；
        真解锁了就整个跳过投料台词，避免 900ms 后被瓶盖台词打断、气泡闪一下 */
     var got = checkCaps();
@@ -3202,6 +3420,10 @@
       caps: state.caps.slice(),
       capsSealed: state.capsSealed,
       charStage: state.charStage,
+      /* 走过去喝一杯：walk 是否在演、是否演过、人物当前站位 */
+      walk: !!state.walk,
+      walkDone: state.walkDone,
+      charXZ: char ? [+char.position.x.toFixed(2), +char.position.z.toFixed(2)] : null,
       sayOn: !!(els.say && els.say.classList.contains("is-on")),
       spin: +state.spin.toFixed(2),
       spinVel: +state.spin.toFixed(2),

@@ -25,45 +25,45 @@ PAGES = [
         "en": "Home",
         "title": "啤酒风味图谱 · Beer Flavor Atlas",
         "title_en": "Beer Flavor Atlas · 22 styles, 55 compounds",
-        "desc": "基于 250 款商业啤酒、226 项化学指标与 50 维感官的风格风味图谱：风格查询、化合物交互、口味生成、风格溯源与跨风格迁移。",
+        "desc": "基于 250 款商业啤酒、226 项化学指标与 50 维感官的风格风味图谱：风格图鉴、调制属于自己的啤酒、品鉴笔记、风味溯源与风格改造。",
     },
     {
         "key": "style",
         "file": "styles.html",
         "no": "01",
-        "cn": "风格查询",
-        "en": "Style library",
-        "title": "风格查询 · 啤酒风味图谱",
-        "title_en": "Style library · Beer Flavor Atlas",
+        "cn": "风格图鉴",
+        "en": "Style atlas",
+        "title": "风格图鉴 · 啤酒风味图谱",
+        "title_en": "Style atlas · Beer Flavor Atlas",
         "desc": "22 种啤酒风格的感官雷达、12 个关键化合物含量区间与四风格化学指纹，可按分类筛选或搜索。",
     },
     {
         "key": "lab",
         "file": "lab.html",
         "no": "02",
-        "cn": "化合物交互",
-        "en": "Compound lab",
-        "title": "化合物交互 · 啤酒风味图谱",
-        "title_en": "Compound lab · Beer Flavor Atlas",
-        "desc": "55 种风味化合物自由增删，实时给出组合的感官轮廓、与目标风格的贴合度，以及每种化合物的影响方向与强度。",
+        "cn": "调制属于自己的啤酒",
+        "en": "Brew your own",
+        "title": "调制属于自己的啤酒 · 啤酒风味图谱",
+        "title_en": "Brew your own · Beer Flavor Atlas",
+        "desc": "挑 55 种原料自由投进瓶里，实时给出这一杯的感官轮廓、与目标风格的贴合度，以及每种原料的影响方向与强度；还能进 3D 酿酒实验室，看酿酒师尝一口。",
     },
     {
         "key": "note",
         "file": "note.html",
         "no": "03",
-        "cn": "口味生成",
+        "cn": "品鉴笔记",
         "en": "Tasting note",
-        "title": "口味生成 · 啤酒风味图谱",
+        "title": "品鉴笔记 · 啤酒风味图谱",
         "title_en": "Tasting note · Beer Flavor Atlas",
-        "desc": "按当前化合物组合生成 100–200 字的品鉴笔记，覆盖香气、口感与余味，并标出主导化合物。",
+        "desc": "按当前这一杯的原料组合生成 100–200 字的品鉴笔记，覆盖香气、口感与余味，并标出主导风味。",
     },
     {
         "key": "origin",
         "file": "origin.html",
         "no": "04",
-        "cn": "风格溯源",
+        "cn": "风味溯源",
         "en": "Origin · Tripel",
-        "title": "风格溯源 · 三料 Tripel 是怎么形成的",
+        "title": "风味溯源 · 三料 Tripel 是怎么形成的",
         "title_en": "Origin · How a Tripel is built",
         "desc": "从原料、工艺到化合物与风味，拆解三料 Tripel 的形成过程：四段工艺时间线、风格轴图与因果链。",
     },
@@ -71,11 +71,11 @@ PAGES = [
         "key": "transfer",
         "file": "transfer.html",
         "no": "05",
-        "cn": "风格迁移",
-        "en": "Style transfer",
-        "title": "风格迁移 · 啤酒风味图谱",
-        "title_en": "Style transfer · Beer Flavor Atlas",
-        "desc": "任选源风格与目标风格，得到新增、删减与调整的化合物清单、五段迁移路径与差值对比。",
+        "cn": "风格改造",
+        "en": "Remix a style",
+        "title": "风格改造 · 啤酒风味图谱",
+        "title_en": "Remix a style · Beer Flavor Atlas",
+        "desc": "任选源风格与目标风格，得到新增、删减与调整的原料清单、五段改造路径与差值对比。",
     },
 ]
 
@@ -201,7 +201,7 @@ TEMPLATE = """<!DOCTYPE html>
       <p class="site-foot-links">
         <a href="index.html">首页</a>
         <span aria-hidden="true">·</span>
-        <a href="styles.html">风格库</a>
+        <a href="styles.html">风格图鉴</a>
         <span aria-hidden="true">·</span>
         <a href="https://github.com/likangyu070710-source/beer-flavor-atlas" rel="noopener">GitHub 仓库</a>
       </p>

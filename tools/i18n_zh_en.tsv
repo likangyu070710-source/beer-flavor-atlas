@@ -5,7 +5,7 @@ Pils/Lager → Tripel 的位移为 11.74 个欧氏单位，226 个化合物中 9
 λ 由 0 增至 0.30 时，非零位移化合物由 216 降到 150、|Δz| > 0.5 的由 93 降到 72，位移只增加 1.8%（11.74 → 11.96），且仍全部达到目标水平。如果要把方案交给酿造端执行，这条路径比全谱调整更可操作。	Raising λ from 0 to 0.30 cuts moving compounds from 216 to 150 and those with |Δz| > 0.5 from 93 to 72, while displacement grows by only 1.8% (11.74 → 11.96) and every target level is still reached. If the plan is to be handed to a brewery, this path is far more workable than adjusting the full profile.
 名单按“先以入选频率 π ≥ 0.6 筛稳定候选、再按边际效应量 |ρ| 排序”的两步规则生成；† 表示候选不足时放宽阈值的补充项。证据等级：一级 17 维可归因到单一化合物，二级 18 维由多化合物共同承载，三级 15 维受标签侧限制。	The list follows a two-step rule: keep stable candidates with inclusion frequency π ≥ 0.6, then rank by marginal effect |ρ|; † marks additions where the threshold had to be relaxed. Evidence tiers: tier 1 covers 17 dimensions attributable to a single compound, tier 2 has 18 shared by several, tier 3 has 15 limited by the label side.
 描述由「化合物 → 感官轴 → 句式」三层规则拼装：先按重要性、含量位置与感官强度计算权重，再取香气类权重最高的三种化合物生成前段，中段读取苦味、酒体、酒精与酸度的聚合分值，尾段选择余味最长的化合物。字数控制在 100–200 之间。	The text is assembled from three layers — compound → sensory axis → sentence pattern. Weights combine importance, where the compound sits in its range, and sensory strength: the top three aroma compounds form the opening clause, the middle clause reads the aggregated scores for bitterness, body, alcohol and acidity, and the closing clause takes the compound with the longest finish. Length is held between 100 and 200 characters.
-「相对基准」是该化合物在本风格中的中位含量相对 250 款样本基准的偏离，▲ 表示高于基准、▼ 表示低于基准；感官贡献取论文中该化合物与各感官维度的关联方向与强度。点「在化合物台打开」可把这组化合物带进交互台继续增减。	“Relative baseline” is how far this compound's median in this style departs from the 250-sample baseline; ▲ means above, ▼ below. Sensory contribution uses the direction and strength of association the paper reports for that compound. “Open in compound lab” carries this set into the interactive bench.
+「相对基准」是该化合物在本风格中的中位含量相对 250 款样本基准的偏离，▲ 表示高于基准、▼ 表示低于基准；感官贡献取论文中该化合物与各感官维度的关联方向与强度。点「在酿酒台打开」可把这组原料带过去，继续增减。	“Relative baseline” is how far this compound's median in this style departs from the 250-sample baseline; ▲ means above, ▼ below. Sensory contribution uses the direction and strength of association the paper reports for that compound. “Open at the brewing bench” carries this set over so you can keep adjusting it.
 真实留出样本的 22 类判别召回率为 0.523，生成样本的风格保真 0.766 高于它，说明生成谱偏“典型”；检出率偏差仍有 0.105，保原子机制只减轻、未消除离散检出结构的误差。这些限定同样适用于本页的画像展示。	Recall on the 22 held-out classes is 0.523, while generated samples reach a style fidelity of 0.766 — higher, meaning generated profiles lean “typical”. The detection-rate gap is still 0.105: the atom-preserving mechanism reduces but does not remove the error from the discrete detection structure. The same caveats apply to the profiles shown on this page.
 缺陷约束在每一段都已生效：DMS、双乙酰、4VG、反式-2-壬烯醛沿路径单调不增。整条路径的终点位移为 11.74，判别概率 0.364；若不施加缺陷约束，位移可降到 11.59，也就是说约束的代价只有 1.3%。	The defect constraint holds in every segment: DMS, diacetyl, 4VG and trans-2-nonenal never increase along the path. The end point sits at 11.74 with classification probability 0.364; without the constraint it would fall to 11.59 — the constraint costs only 1.3%.
 区间是该化合物在源/目标风格中的 10%–90% 分布近似；「变化」按中位含量计算。新增表示源风格接近未检出、目标风格明确存在；删减反之。清单按「位移 × 化合物重要性」排序，仅显示前 16 项，共 50 项。	Ranges approximate the 10th–90th percentile of that compound in the source and target styles; “change” uses the median. “Add” means the compound sits near the detection limit in the source and is clearly present in the target; “remove” is the reverse. The list ranks by displacement × compound importance and shows the top 16 of 50.
@@ -62,7 +62,7 @@ Tripel / Kriek / Lambic / Pils 的正负各 5 位，单位 Cohen's d	Top five in
 高浓度麦汁发酵，酯香与酒精同时上扬，酒体厚实，余味悠长。	Fermented from high-gravity wort: esters and alcohol rise together, full body, long finish.
 酒花萜烯醇经发酵转化而来，同时受酒花投放与发酵进程影响	Formed in fermentation from hop terpene alcohols, shaped by both hopping rate and fermentation progress
 香料与深色麦芽同台，肉桂、丁香与焦糖构成节庆式的甜香。	Spice and dark malt on the same stage: cinnamon, clove and caramel make a festive sweetness.
-05 / 风格迁移 · Style transfer	05 / Style transfer
+05 / 风格改造 · Remix a style	05 / Remix a style
 Kriek 中最高（d=2.03），来自樱桃核与香料	Highest in Kriek (d=2.03), from cherry stones and spice
 中等色度的艾尔，焦糖麦芽的甜香与温和的苦味取得平衡。	A mid-colour ale balancing caramel-malt sweetness against gentle bitterness.
 低醇 / 无醇 · Low / No alcohol	Low / No alcohol
@@ -71,12 +71,12 @@ Kriek 中最高（d=2.03），来自樱桃核与香料	Highest in Kriek (d=2.03)
 深色修道院双料，焦糖与深色果脯的甜香，酒体中等偏厚。	A dark abbey dubbel: caramel and dried-fruit sweetness, medium-full body.
 西佛兰德艾尔 · West Flanders ale	West Flanders ale
 论文出处 表13 邻接 Christmas 6.14	Paper source table 13, adjacent to Christmas 6.14
-01 / 风格查询 · Style library	01 / Style library
-02 / 化合物交互 · Compound lab	02 / Compound lab
+01 / 风格图鉴 · Style atlas	01 / Style atlas
+02 / 调制属于自己的啤酒 · Brew your own	02 / Brew your own
 6 个模块的规模与代表物质（Q = 0.5874）	Size and representative compounds of the six modules (Q = 0.5874)
 含量区间为分位得分口径推算，单位按该化合物实际量纲	Content ranges are derived on the quantile-score scale; units follow each compound's own dimension
 左：工艺动作 · 中：化合物响应 · 右：感官结果	Left: process action · Middle: compound response · Right: sensory result
-03 / 口味生成 · Tasting note	03 / Tasting note
+03 / 品鉴笔记 · Tasting note	03 / Tasting note
 Tripel ↔ Pils/Lager 质心距离	Tripel ↔ Pils/Lager centroid distance
 ——偏高意味着这一版比典型风格更浓，偏低则相反。	— higher means this version is richer than the typical example, lower the opposite.
 世涛 / 波特 · Stout / Porter	Stout / Porter
@@ -116,7 +116,7 @@ Tasting note · 品鉴笔记	Tasting note
 酒花单萜醇的核心，受干投与发酵双重影响	The core hop monoterpene alcohol, shaped by both dry hopping and fermentation
 酒花花香的主力，Hoppy 风格中最高	The main hop-floral driver; highest in Hoppy styles
 长时间桶陈的标志，Lambic 中最高	A sign of long barrel ageing; highest in Lambic
-04 / 风格溯源 · Origin	04 / Origin
+04 / 风味溯源 · Origin	04 / Origin
 乙醇 +0.190、甘油 +2.08	Ethanol +0.190, glycerol +2.08
 的柑橘皮、佛手与白花的酒花香气起势，	opens with the citrus peel, bergamot and white-flower hop aroma;
 脂肪酸乙酯，发酵强度与酯化能力的指标	Fatty-acid ethyl ester, an index of fermentation strength and esterification capacity
@@ -335,7 +335,7 @@ Z,Z-香叶基里那醇	(Z,Z)-geranyl linalool
 双料 Dubbel	Dubbel
 反式邻甲氧基肉桂醛	trans-o-methoxycinnamaldehyde
 口腔里留下硫的钝感	a blunt sulfur feel in the mouth
-在化合物台打开 →	Open in compound lab →
+在酿酒台打开 →	Open at the brewing bench →
 小麦啤 Wheat	Wheat
 属性 · X4vg	Attr · X4vg
 属性 · body	Attr · body
@@ -509,7 +509,7 @@ Z-橙花叔醇	(Z)-nerolidol
 乙基里那醇	ethyl linalool
 乙酸酯风味	Acetate note
 二氧化碳感	Carbonation
-化合物交互	Compound lab
+调制属于自己的啤酒	Brew your own
 化合物目录	Compound catalogue
 口径说明：	Notes:
 惕各酸乙酯	ethyl tiglate
@@ -548,7 +548,7 @@ Z-橙花叔醇	(Z)-nerolidol
 判别概率	Classification probability
 化学指纹	Chemical fingerprint
 化学来源	Chemical origin
-口味生成	Tasting note
+品鉴笔记	Tasting note
 口感发干	the palate dries out
 口感发涩	astringent on the palate
 口感略干	slightly dry
@@ -603,11 +603,11 @@ Z-橙花叔醇	(Z)-nerolidol
 陈旧酒花	Stale hops
 面包风味	Bread flavour
 风格判别	Style discrimination
-风格查询	Style library
-风格溯源	Origin
+风格图鉴	Style atlas
+风味溯源	Origin
 风格语境	Style context
 风格轴长	Style-axis length
-风格迁移	Style transfer
+风格改造	Remix a style
 龙涎香醚	Ambroxide
 5 项	{n} items
 乙酸感	Acetic
@@ -694,11 +694,11 @@ Z-橙花叔醇	(Z)-nerolidol
 查风格、调组合、写描述、溯源、迁移	Browse styles, mix blends, write notes, trace origins, migrate
 四种风格，四种化学指纹	Four styles, four fingerprints
 点开任一风格，看它的含量区间与论文指纹	Open a style for its content ranges and the paper's fingerprint
-22 个风格的关键化合物与含量区间	Key compounds and content ranges across 22 styles
-增减化合物，实时看感官轮廓怎么变	Add or remove compounds and watch the sensory profile shift
-把当前组合写成一段品鉴笔记	Turn the current blend into a tasting note
-Tripel 的原料、工艺与化合物因果链	Ingredients, process and compounds behind a tripel
-从一种风格改造成另一种的干预清单	The intervention list for turning one style into another
+22 种风格，各自的关键化合物与含量区间	22 styles, each with its key compounds and content ranges
+挑原料投进瓶里，看这一杯怎么变	Pick ingredients, pour them in, and watch the glass change
+把这一杯写成一段 100–200 字的笔记	Turn this glass into a 100–200 word tasting note
+从原料、工艺到风味，一杯 Tripel 的来历	From grain and process to flavour: the making of a tripel
+从一种风格改到另一种，需要动哪几样	What to change when moving from one style to another
 内容依据论文表 5–27 整理，含量区间按分位得分口径推算；完整口径与出处见弹窗。	Built from the paper's tables 5–27; content ranges are derived on the quantile-score scale — see the data notes for the full method.
 调配与试饮	Mix & taste
 6 种已在瓶中	{n} in the bottle
@@ -730,7 +730,6 @@ GitHub 仓库	GitHub repository
 点开看含量区间与指纹	Open a style for ranges and fingerprints
 内容依据论文表格整理；含量区间按分位得分口径推算。	Compiled from the paper's tables; ranges are estimated on a percentile-score basis.
 02 / 调配台 · Mix your own	02 / Mix your own
-调一杯自己的啤酒	Mix a beer of your own
 把 55 种化合物翻译成厨房里找得到的东西。点一样加进去，瓶里会多一层颜色，旁边的小人替你尝一口。	Every compound translated into something you can find in a kitchen. Add one and the bottle gains another layer of colour; the little figure tastes it for you.
 来一杯经典配方	Load a classic recipe
 小白模式	Novice
@@ -790,3 +789,12 @@ GitHub 仓库	GitHub repository
 垫台记下了。	The stand remembers.
 往后这屋子有你一份。	This room is partly yours now.
 按 Enter 与酿酒师说话，Esc 退出	Press Enter to talk to the brewer, Esc to leave
+# 2026-11-11 标题改名与 3D 酿酒实验室
+这一杯	This glass
+还没有投料。从原料柜里挑一样，或点「来一杯经典配方」。	Nothing poured yet. Pick an ingredient from the store, or try “a classic recipe”.
+让这一杯自己开口	Let this glass speak
+把 55 种化合物翻译成厨房里找得到的东西。挑几样投进瓶里，颜色和香气会跟着变，酿酒师替你尝一口——这一杯就是你自己的。	55 compounds translated into things you can find in a kitchen. Pick a few, pour them in, and colour and aroma follow; the brewer takes a sip for you — this glass is yours.
+3D 酿酒实验室	3D brewhouse
+正在准备酿酒实验室	Preparing the brewhouse
+生成实验室与货架…	Building the brewhouse and shelves…
+进入 3D 实验室	Enter the 3D brewhouse

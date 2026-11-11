@@ -171,11 +171,11 @@
   /* ================= 风格：列表 ================= */
   /* ---------------- 首页 ---------------- */
   const HOME_MODS = [
-    { v: "style", n: "01", icon: "library", t: "风格查询", d: "22 个风格的关键化合物与含量区间" },
-    { v: "lab", n: "02", icon: "lab", t: "化合物交互", d: "增减化合物，实时看感官轮廓怎么变" },
-    { v: "note", n: "03", icon: "note", t: "口味生成", d: "把当前组合写成一段品鉴笔记" },
-    { v: "origin", n: "04", icon: "origin", t: "风格溯源", d: "Tripel 的原料、工艺与化合物因果链" },
-    { v: "transfer", n: "05", icon: "transfer", t: "风格迁移", d: "从一种风格改造成另一种的干预清单" },
+    { v: "style", n: "01", icon: "library", t: "风格图鉴", d: "22 种风格，各自的关键化合物与含量区间" },
+    { v: "lab", n: "02", icon: "lab", t: "调制属于自己的啤酒", d: "挑原料投进瓶里，看这一杯怎么变" },
+    { v: "note", n: "03", icon: "note", t: "品鉴笔记", d: "把这一杯写成一段 100–200 字的笔记" },
+    { v: "origin", n: "04", icon: "origin", t: "风味溯源", d: "从原料、工艺到风味，一杯 Tripel 的来历" },
+    { v: "transfer", n: "05", icon: "transfer", t: "风格改造", d: "从一种风格改到另一种，需要动哪几样" },
   ];
   const HOME_GAL = ["hoppy", "stout", "kriek", "tripel"];
 
@@ -281,7 +281,7 @@
       .join("");
 
     el.innerHTML =
-      '<div class="view-head"><div class="eyebrow">01 / 风格查询 · Style library</div>' +
+      '<div class="view-head"><div class="eyebrow">01 / 风格图鉴 · Style atlas</div>' +
       "<h1>22 种风格的风味坐标<em>Flavor map</em></h1>" +
       '<p class="lede">从 250 款商业啤酒中归纳的 22 个风格，每一种都由一组化合物浓度与 50 维感官评分共同定位。' +
       "点击任一风格，查看它的<b>关键风味化合物及其含量区间</b>、感官画像与论文给出的化学指纹。</p></div>" +
@@ -377,7 +377,7 @@
       '<span class="tag">ABV ' + s.abv + "</span>" +
       '<span class="tag tag-src">论文出处 ' + s.src + "</span></div>" +
       '<div class="note-actions" style="margin-top:10px">' +
-      '<button class="solid-btn" data-lab>在化合物台打开 →</button>' +
+      '<button class="solid-btn" data-lab>在酿酒台打开 →</button>' +
       '<button class="line-btn" data-migrate>以此为迁移目标</button></div></div>' +
       '<div class="radar-box">' + C.radar([{ values: vals, color: "#e9a94e", width: 1.9, dotR: 2.4 }], { axes: AX, size: 300 }) + "</div></div>" +
       '<figure class="d-photo"><img src="images/styles/' + s.id + '.jpg" alt="' +
@@ -392,7 +392,7 @@
       '<div class="table"><div class="t-row t-head"><span>化合物</span><span>化学来源</span><span>含量区间</span><span>相对基准</span><span>感官贡献</span></div>' +
       keyRows + "</div>" +
       '<div class="src-note"><b>怎么读这张表：</b>「相对基准」是该化合物在本风格中的中位含量相对 250 款样本基准的偏离，▲ 表示高于基准、▼ 表示低于基准；' +
-      "感官贡献取论文中该化合物与各感官维度的关联方向与强度。点「在化合物台打开」可把这组化合物带进交互台继续增减。</div></div>" +
+      "感官贡献取论文中该化合物与各感官维度的关联方向与强度。点「在酿酒台打开」可把这组原料带过去，继续增减。</div></div>" +
 
       '<div class="panel"><div class="panel-head"><div class="h2">化学指纹<small>Fingerprint</small></div>' +
       '<span class="panel-note">' + (s.fp.src.indexOf("表12") >= 0 ? "论文表 12 的 Cohen's d（不足处按同一口径补足）" : "跨 22 风格标准化后的 d 值") + "</span></div>" +
@@ -500,11 +500,11 @@
       .join("");
 
     el.innerHTML =
-      '<div class="view-head"><div class="eyebrow">02 / ' + (novice ? "调配台 · Mix your own" : "化合物交互 · Compound lab") + "</div>" +
-      "<h1>" + (novice ? "调一杯自己的啤酒" : "把配方拆成化合物") + "<em>" + (novice ? "Mix your own" : "Build a profile") + "</em></h1>" +
+      '<div class="view-head"><div class="eyebrow">02 / 调制属于自己的啤酒 · Brew your own</div>' +
+      "<h1>" + (novice ? "调制属于自己的啤酒" : "把配方拆成化合物") + "<em>" + (novice ? "Brew your own" : "Build a profile") + "</em></h1>" +
       '<p class="lede">' +
       (novice
-        ? "把 55 种化合物翻译成厨房里找得到的东西。点一样加进去，瓶里会多一层颜色，旁边的小人替你尝一口。"
+        ? "把 55 种化合物翻译成厨房里找得到的东西。挑几样投进瓶里，颜色和香气会跟着变，酿酒师替你尝一口——这一杯就是你自己的。"
         : "目录里是论文涉及的 55 个风味化合物。点击加入或移除，旁边的面板会实时给出<b>每种化合物的感官属性</b>，以及它相对所选风格的<b>影响强度与方向</b>——偏高意味着这一版比典型风格更浓，偏低则相反。") +
       "</p></div>" +
       '<div class="lab-status"><i></i>LAB CONSOLE · LIVE<span>55 COMPOUNDS / 22 STYLES</span><b>2D + 3D</b></div>' +
@@ -597,11 +597,11 @@
       })
       .join("");
     return (
-      '<div class="panel"><div class="panel-head"><div class="h2">当前组合<small>' + sel.length + ' compounds</small></div>' +
+      '<div class="panel"><div class="panel-head"><div class="h2">' + (isNovice() ? "这一杯" : "当前组合") + '<small>' + sel.length + (isNovice() ? " ingredients" : " compounds") + "</small></div>" +
       '<span class="panel-note">目标风格：' + s.cn + "</span></div>" +
       (sel.length
         ? '<div class="sel-strip">' + pills + "</div>"
-        : '<p class="empty-hint">还没有化合物。可以从目录逐个加入，或点「载入该风格的特征组合」。</p>') +
+        : '<p class="empty-hint">' + (isNovice() ? "还没有投料。从原料柜里挑一样，或点「来一杯经典配方」。" : "还没有化合物。可以从目录逐个加入，或点「载入该风格的特征组合」。") + "</p>") +
       '<div class="two-col" style="margin-top:16px;grid-template-columns:minmax(0,1fr) 300px;align-items:center">' +
       '<div><div class="match-box"><div class="match-num">' + (sel.length ? Math.round(match) : "—") + '<small>%</small></div>' +
       '<div class="match-txt">与本风格画像的贴合度<br><span style="color:var(--muted-2)">按 12 个感官轴的均方误差换算</span></div></div>' +
@@ -733,7 +733,7 @@
     persist();
   }
 
-  /* ================= 口味生成 ================= */
+  /* ================= 品鉴笔记 ================= */
   const ARO_SENT = [
     "先由{A}的{a}起势，{B}随后补上{b}，{C}把{c}垫在背景里。",
     "开瓶是{A}的{a}，紧接着{B}的{b}涌上来，{C}在尾端添了一层{c}。",
@@ -950,8 +950,8 @@
       : "";
 
     el.innerHTML =
-      '<div class="view-head"><div class="eyebrow">03 / 口味生成 · Tasting note</div>' +
-      "<h1>让化合物自己开口<em>Tasting note</em></h1>" +
+      '<div class="view-head"><div class="eyebrow">03 / 品鉴笔记 · Tasting note</div>' +
+      "<h1>让这一杯自己开口<em>Tasting note</em></h1>" +
       '<p class="lede">根据当前化合物组合与它们在<b>' + s.cn + "</b>中的含量位置，生成一段 <b>100–200 字</b>的整体风味描述，" +
       "覆盖香气、口感与余味，并标出起主导作用的化合物。描述由规则引擎生成，可反复换一种写法。</p></div>" +
       '<div class="note-wrap"><div class="lab-main"><div class="note-card"><div class="note-kicker"><span>Tasting note · 品鉴笔记</span><b>' + (note ? note.chars : 0) + " 字</b></div>" +
@@ -1037,7 +1037,7 @@
       .join("");
 
     el.innerHTML =
-      '<div class="view-head"><div class="eyebrow">04 / 风格溯源 · Origin</div>' +
+      '<div class="view-head"><div class="eyebrow">04 / 风味溯源 · Origin</div>' +
       "<h1>三料是怎么长出来的<em>Anatomy of a Tripel</em></h1>" +
       '<p class="lede">论文第三问把风格写成一条有化学含义的轴：从皮尔森/拉格的质心出发，沿 <b>u<sub>T</sub></b> 方向移动 ' +
       "<b>11.57</b> 个单位，就到达三料的典型位置。这条轴上的每一个位移，都能落回具体的原料与工艺动作。</p></div>" +
@@ -1162,8 +1162,8 @@
       .join("");
 
     el.innerHTML =
-      '<div class="view-head"><div class="eyebrow">05 / 风格迁移 · Style transfer</div>' +
-      "<h1>从一种风格改造成另一种<em>Style transfer</em></h1>" +
+      '<div class="view-head"><div class="eyebrow">05 / 风格改造 · Remix a style</div>' +
+      "<h1>从一种风格改造成另一种<em>Remix a style</em></h1>" +
       '<p class="lede">迁移沿目标与源质心之差的方向进行，求的是<b>带缺陷上限的最小干预解</b>：在 DMS、双乙酰、4VG、反式-2-壬烯醛不高于源样本的前提下，' +
       "用最小的欧氏位移把谱推到目标风格。下面列出需要增加、删减与调整的化合物及其用量区间。</p></div>" +
 

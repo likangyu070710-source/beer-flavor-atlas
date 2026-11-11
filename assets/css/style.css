@@ -723,7 +723,7 @@ h1 em {
 .impact-bar::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--line-2); }
 .impact-val { font-family: var(--font-mono); font-size: 10px; color: var(--muted-2); text-align: right; }
 
-/* ---------------- 口味生成 ---------------- */
+/* ---------------- 品鉴笔记 ---------------- */
 .note-wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr); gap: 18px; align-items: start; }
 .note-card {
   position: relative;
@@ -1628,7 +1628,7 @@ html[lang="en"] .panel p { font-family: var(--font-ui); }
   .hm-hero-art { max-width: none; }
 }
 
-/* ---------------- 化合物交互：入瓶与试饮 ---------------- */
+/* ---------------- 调制属于自己的啤酒：入瓶与试饮 ---------------- */
 .rx-panel { overflow: hidden; }
 .rx-wrap {
   display: grid;

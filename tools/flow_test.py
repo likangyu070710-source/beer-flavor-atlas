@@ -19,7 +19,7 @@ with sync_playwright() as p:
     store = page.evaluate("sessionStorage.getItem('atlas-page-state')")
     print("lab 点击:", name, "| sessionStorage:", store[:90])
 
-    # 2) 跳到口味生成页，组合应延续
+    # 2) 跳到品鉴笔记页，组合应延续
     page.click('.nav-item[href="note.html"]')
     page.wait_for_load_state("networkidle")
     note = page.locator(".note-card").inner_text()[:80].replace("\n", " ")
